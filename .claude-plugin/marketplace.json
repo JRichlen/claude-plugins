@@ -1,0 +1,20 @@
+{
+  "name": "graveyard-plugin",
+  "description": "Marketplace for the Graveyard plugin: archive old GitHub repos as restorable git bundles, then safely delete the originals.",
+  "owner": {
+    "name": "Jordan Richlen"
+  },
+  "plugins": [
+    {
+      "name": "graveyard",
+      "description": "Archive old GitHub repositories into a single private graveyard repo as restorable git bundles, then safely delete the originals. Captures full history (branches, tags, PR refs) and never deletes an original until its backup is verified.",
+      "version": "1.0.0",
+      "source": "./",
+      "author": {
+        "name": "Jordan Richlen"
+      },
+      "license": "MIT",
+      "keywords": ["github", "backup", "archive", "git-bundle", "cleanup"]
+    }
+  ]
+}

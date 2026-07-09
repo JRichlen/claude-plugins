@@ -1,0 +1,21 @@
+{
+  "name": "graveyard",
+  "version": "1.0.0",
+  "description": "Archive old GitHub repositories into a single private graveyard repo as restorable git bundles, then safely delete the originals. Captures full history (branches, tags, PR refs) and never deletes an original until its backup is verified.",
+  "author": {
+    "name": "Jordan Richlen"
+  },
+  "repository": "https://github.com/JRichlen/graveyard-plugin",
+  "homepage": "https://github.com/JRichlen/graveyard-plugin",
+  "license": "MIT",
+  "keywords": [
+    "github",
+    "backup",
+    "archive",
+    "git-bundle",
+    "cleanup",
+    "repository-management"
+  ],
+  "skills": "./skills/",
+  "commands": "./commands/"
+}

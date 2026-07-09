@@ -1,0 +1,7 @@
+# Local staging when running the workflow
+graveyard/
+mirrors/
+*.bundle
+delete-originals.sh
+summary.tsv
+.DS_Store
