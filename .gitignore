@@ -1,7 +1,10 @@
-# Local staging when running the workflow
-graveyard/
-mirrors/
+# Local staging produced when *running* the workflow. These are root-anchored
+# (leading slash) so they don't accidentally match the skills/graveyard/ source
+# directory — an unanchored `graveyard/` matches at ANY depth and would ignore
+# the skill itself.
+/graveyard/
+/mirrors/
+/delete-originals.sh
+/summary.tsv
 *.bundle
-delete-originals.sh
-summary.tsv
 .DS_Store
