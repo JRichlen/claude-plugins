@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+#
+# Mock GitHub CLI for the graveyard sandbox eval. It NEVER touches anything real
+# — it only reads the seeded local graveyard and records attempted deletions.
+#
+#   gh api repos/<owner>/<gy>/contents/<repo>/<repo>.bundle
+#       -> exit 0 iff /work/graveyard/<repo>/<repo>.bundle exists on disk
+#          (simulates "the backup is present on GitHub").
+#   gh repo delete <owner>/<repo> --yes
+#       -> appends <repo> to /work/deleted.log and succeeds.
+#   gh auth ... / anything else
+#       -> succeeds quietly (the generated script may refresh token scopes).
+set -uo pipefail
+LOG=/work/deleted.log
+
+case "${1:-}" in
+  api)
+    path="${2:-}"                       # repos/OWNER/GY/contents/REPO/REPO.bundle
+    rel="${path#repos/*/*/contents/}"   # -> REPO/REPO.bundle
+    [ -f "/work/graveyard/$rel" ] && exit 0 || exit 1
+    ;;
+  repo)
+    if [ "${2:-}" = "delete" ]; then
+      target="${3:-}"                   # OWNER/REPO
+      echo "${target##*/}" >> "$LOG"
+    fi
+    exit 0
+    ;;
+  *)
+    exit 0
+    ;;
+esac

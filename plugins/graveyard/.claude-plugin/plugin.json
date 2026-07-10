@@ -5,8 +5,8 @@
   "author": {
     "name": "Jordan Richlen"
   },
-  "repository": "https://github.com/JRichlen/graveyard-plugin",
-  "homepage": "https://github.com/JRichlen/graveyard-plugin",
+  "repository": "https://github.com/JRichlen/claude-plugins",
+  "homepage": "https://github.com/JRichlen/claude-plugins/tree/main/plugins/graveyard",
   "license": "MIT",
   "keywords": [
     "github",

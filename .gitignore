@@ -8,3 +8,18 @@
 /summary.tsv
 *.bundle
 .DS_Store
+
+# Eval artifacts. Secrets and generated output must never be committed.
+node_modules/
+.env
+.env.*
+# promptfoo writes its run cache and HTML output here.
+evals/promptfoo/output/
+.promptfoo/
+promptfoo-errors.log
+# pier stages a fresh copy of the live skill scripts into each task's build
+# context at run time (see evals/pier/run.sh) — it's generated, not source.
+evals/pier/tasks/*/environment/skill/
+# pier run logs / local results.
+evals/pier/.pier/
+evals/pier/runs/
