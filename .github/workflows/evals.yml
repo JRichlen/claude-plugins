@@ -1,0 +1,83 @@
+name: evals
+
+# Verify the eval discipline on every PR (and on pushes to main). The cheap tier
+# is the always-on gate; the grader-model check confirms the promptfoo grader
+# slug actually resolves; the behavioral tier runs the full promptfoo suite.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: evals-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cheap:
+    name: cheap tier (deterministic, offline)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: run cheap eval gate
+        run: evals/cheap/run.sh
+
+  grader-model:
+    # Confirms the Anthropic grader model configured in promptfooconfig.yaml is a
+    # real, reachable model id — a 200 confirms the slug, a 404 says it's wrong.
+    # This is the check that answers "is `claude-sonnet-5` the right id?" without
+    # depending on the OpenRouter subject model at all.
+    name: confirm grader model resolves
+    runs-on: ubuntu-latest
+    # Secrets aren't available to fork PRs, so only run where they are.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v4
+      - name: ping the configured grader model
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+            echo "::error::ANTHROPIC_API_KEY secret is not set — add it in repo Settings > Secrets."
+            exit 1
+          fi
+          # Parse the grader slug straight from the config so this never drifts.
+          grader=$(sed -n 's/.*provider:[[:space:]]*anthropic:messages:\([^[:space:]]*\).*/\1/p' \
+            evals/promptfoo/promptfooconfig.yaml | head -n1)
+          if [ -z "$grader" ]; then
+            echo "::error::could not find an 'anthropic:messages:<model>' grader in promptfooconfig.yaml"
+            exit 1
+          fi
+          echo "Configured grader model: $grader"
+          code=$(curl -sS -o resp.json -w '%{http_code}' https://api.anthropic.com/v1/messages \
+            -H "x-api-key: $ANTHROPIC_API_KEY" \
+            -H "anthropic-version: 2023-06-01" \
+            -H "content-type: application/json" \
+            -d "{\"model\":\"$grader\",\"max_tokens\":8,\"messages\":[{\"role\":\"user\",\"content\":\"ping\"}]}")
+          echo "HTTP $code"
+          cat resp.json
+          echo
+          if [ "$code" != "200" ]; then
+            echo "::error::grader model '$grader' did not resolve (HTTP $code). Fix the slug in promptfooconfig.yaml."
+            exit 1
+          fi
+          echo "grader model '$grader' resolved OK."
+
+  behavioral:
+    name: behavioral tier (promptfoo)
+    needs: [cheap, grader-model]
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: promptfoo eval
+        working-directory: evals/promptfoo
+        env:
+          # Subject model (cheap, via OpenRouter) + grader (Anthropic).
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: npx --yes promptfoo@latest eval
