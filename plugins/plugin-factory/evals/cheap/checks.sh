@@ -91,3 +91,71 @@ else
   rm -rf "$_tmp"
   unset _scaffold _tmp _gen _missing
 fi
+
+# --- Wave 3: the wrapped skill-iteration loop --------------------------------
+# The factory doesn't just scaffold a red skeleton; it ships the discipline for
+# turning that skeleton into a skill that beats a baseline. Those artifacts —
+# the SHA-pinned upstream wrap (#9), the file-based handoff templates (#7), the
+# advisory delta gate (#4), and the contamination/stuck guards (#14) — are held
+# to the same deterministic bar. Each is checkable offline, so none can rot into
+# a good intention.
+group "plugin 'plugin-factory' skill-iteration loop (wave 3)"
+
+_skill="$PLUGIN_DIR/skills/plugin-factory"
+
+# #9 — the skill-creator pin is well-formed: a real 40-hex commit, not a moving
+# branch ref, so an upstream bump is a reviewable one-line SHA change.
+_pin="$_skill/vendor/skill-creator.pin"
+if python3 - "$_pin" <<'PY' 2>/dev/null; then
+import re, sys
+kv = {}
+for line in open(sys.argv[1]):
+    line = line.strip()
+    if not line or line.startswith("#") or ":" not in line:
+        continue
+    k, v = line.split(":", 1)
+    kv[k.strip()] = v.strip()
+need = ("repo", "path", "ref", "sha")
+sys.exit(0 if all(kv.get(k) for k in need) and re.fullmatch(r"[0-9a-f]{40}", kv["sha"]) else 1)
+PY
+  ok "plugin-factory: skill-creator.pin is well-formed (40-hex sha, wrap not fork)"
+else
+  bad "plugin-factory: skill-creator.pin missing, malformed, or sha is not a 40-hex commit"
+fi
+
+# #7 — the three file-based handoff templates + the reference exist. These are
+# the seam that lets the loop cross a harness boundary via committed files.
+_missing=""
+for f in \
+  "templates/handoff/BRIEF.md" \
+  "templates/handoff/INTENT.md" \
+  "templates/handoff/STUCK.md" \
+  "references/skill-iteration.md"; do
+  [ -e "$_skill/$f" ] || _missing="$_missing $f"
+done
+if [ -z "$_missing" ]; then ok "plugin-factory: handoff templates + skill-iteration reference present"
+else bad "plugin-factory: skill-iteration artifacts missing:$_missing"; fi
+
+# #4 — the delta gate self-tests AND self-declares advisory (its --self-test
+# asserts MODE is advisory, so a flip to blocking without a deliberate edit fails).
+if python3 "$_skill/scripts/delta_gate.py" --self-test >/dev/null 2>&1; then
+  ok "plugin-factory: delta_gate.py self-test (advisory-only lift gate)"
+else
+  bad "plugin-factory: delta_gate.py self-test failed"
+fi
+
+# #14 — the contamination + stuck-budget guard self-tests.
+if python3 "$_skill/scripts/check_baseline_integrity.py" --self-test >/dev/null 2>&1; then
+  ok "plugin-factory: check_baseline_integrity.py self-test (contamination + stuck guards)"
+else
+  bad "plugin-factory: check_baseline_integrity.py self-test failed"
+fi
+
+# #14 — the shipped STUCK.md template carries a live budget the guard can read.
+if python3 "$_skill/scripts/check_baseline_integrity.py" --stuck "$_skill/templates/handoff/STUCK.md" >/dev/null 2>&1; then
+  ok "plugin-factory: STUCK.md template exposes a readable, non-exhausted budget"
+else
+  bad "plugin-factory: STUCK.md template budget is missing or already exhausted"
+fi
+
+unset _skill _pin _missing

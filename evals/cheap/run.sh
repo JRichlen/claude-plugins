@@ -205,6 +205,29 @@ for p in mkt.get("plugins", []):
 PY
 )
 
+# --- 11. Branch-protection lock (winner #15) --------------------------------
+# The four required status checks and the two deep-tier safety paths are frozen
+# in ci/required-checks.json; ci/check_branch_protection.py asserts each still
+# appears verbatim in .github/workflows/evals.yml, so branch protection can't
+# drift away from what CI emits. This is a REPO-level gate, not a per-plugin one,
+# and it fires only when the workflow exists at the repo root — so it's active in
+# the real repo (fail-closed on drift) yet inert in the synthetic counterfeit
+# root, which carries neither .github/ nor ci/. FAIL substring: "branch-protection drift".
+if [ -f ".github/workflows/evals.yml" ]; then
+  group "branch-protection lock (required checks in sync with workflow)"
+  if python3 ci/check_branch_protection.py --self-test >/dev/null 2>&1; then
+    ok "check_branch_protection.py self-test"
+  else
+    bad "check_branch_protection.py self-test failed"
+  fi
+  if out="$(python3 ci/check_branch_protection.py --repo . 2>&1)"; then
+    ok "branch protection in sync with .github/workflows/evals.yml"
+  else
+    bad "branch-protection drift between ci/required-checks.json and the workflow"
+    printf '%s\n' "$out" | sed 's/^/    /'
+  fi
+fi
+
 # --- summary ----------------------------------------------------------------
 printf '\n\033[1msummary:\033[0m %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

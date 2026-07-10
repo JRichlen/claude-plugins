@@ -78,6 +78,18 @@ evals/cheap/run.sh
 A newly scaffolded plugin is **expected to be red** until step 3.2 is done —
 that's the point. Green means someone wrote real checks for the invariant.
 
+### 5. Turn the red skeleton into a skill that beats a baseline
+
+Scaffolding gets you *valid, wired, RED*. Making the skill actually improve a
+model's behavior is a separate, iterative loop — and this plugin ships the
+discipline for it rather than leaving you to improvise. See
+[`references/skill-iteration.md`](references/skill-iteration.md): it wraps the
+SHA-pinned upstream skill-creator (`vendor/skill-creator.pin`), hands off state
+through the committed `templates/handoff/` files so the loop survives across
+sessions and harnesses, scores each round's *lift* over a no-skill baseline with
+`scripts/delta_gate.py` (advisory for one release), and keeps the loop honest and
+bounded with `scripts/check_baseline_integrity.py`.
+
 ## Keep it portable
 
 Prefer portable prose and deterministic bash over harness-specific machinery —

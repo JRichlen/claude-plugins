@@ -1,0 +1,13 @@
+{
+  "_comment": "Winner #15 — branch-protection-as-code. The four status checks that MUST be required on the protected branch, and the two deep-tier safety paths whose changes force the gated pier run. These strings are the single source of truth: check_branch_protection.py asserts every one of them still appears verbatim in .github/workflows/evals.yml, so branch protection cannot silently drift away from what CI actually emits. Changing a check name or a safety path is therefore a deliberate two-file edit that the cheap tier notices.",
+  "required_checks": [
+    "cheap tier (deterministic, offline)",
+    "confirm grader model resolves",
+    "behavioral tier (promptfoo)",
+    "deep tier (pier)"
+  ],
+  "deep_safety_paths": [
+    "plugins/graveyard/skills/graveyard/scripts/**",
+    "evals/pier/**"
+  ]
+}
