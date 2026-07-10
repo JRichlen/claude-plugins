@@ -125,7 +125,12 @@ for agent in $AGENTS; do
   run_rc=$?
   set -e
 
-  reward="$(reward_of "$job_dir/result.json")"
+  result_json="$(ls -1 "$job_dir"/*/result.json 2>/dev/null | head -n1 || true)"
+  if [ -z "$result_json" ]; then
+    reward="ERR:noresult"
+  else
+    reward="$(reward_of "$result_json")"
+  fi
   case "$reward" in
     ERR:*) verdict="ERROR ($reward)"; overall=1 ;;
     *)
@@ -145,7 +150,7 @@ done
 
 echo
 echo "===== deep tier summary ====="
-for line in ${summary[@]+"${summary[@]}"}; do echo "$line"; done
+for line in "${summary[@]}"; do echo "$line"; done
 echo "============================="
 if [ "$overall" -eq 0 ]; then echo "deep tier: PASS"; else echo "deep tier: FAIL"; fi
 exit "$overall"

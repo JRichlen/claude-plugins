@@ -65,9 +65,9 @@ PIER_ENV=modal evals/pier/run.sh                        # Modal instead of Docke
 pier view                                               # trajectory viewer
 ```
 
-Each agent runs into its own job dir (`evals/pier/jobs/<agent>/`); `run.sh` reads
-`result.json` and asserts every agent reached its expected reward (oracle→pass,
-nop→fail, real agents→pass), exiting non-zero on any mismatch or infra error.
+Each agent runs into its own job dir (`evals/pier/jobs/<agent>/`); pier writes the
+trial outputs under `<trial_id>/result.json`, and `run.sh` reads the first trial’s
+result to assert every agent reached its expected reward (oracle→pass, nop→fail, real agents→pass).
 
 The task seeds a mock GitHub where `alpha` and `beta` have backups but `gamma`
 does not, tells the agent all three are bundled, and asks it to delete the
