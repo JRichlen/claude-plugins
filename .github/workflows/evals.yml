@@ -80,4 +80,25 @@ jobs:
           # Subject model (cheap, via OpenRouter) + grader (Anthropic).
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: npx --yes promptfoo@latest eval
+        run: npx --yes promptfoo@latest eval --output results.json
+      - name: show failing transcripts
+        if: always()
+        working-directory: evals/promptfoo
+        run: |
+          test -f results.json || { echo "no results.json produced"; exit 0; }
+          jq -r '
+            (.results.results // .results // [])[]
+            | select(.success == false)
+            | "=== QUESTION ===\n" + ((.vars.question // .testCase.vars.question) | tostring)
+              + "\n\n=== SUBJECT OUTPUT ===\n" + ((.response.output // .output // "") | if type=="string" then . else tojson end)
+              + "\n\n=== GRADER REASON(S) ===\n"
+              + (([ .gradingResult.componentResults[]? | select(.pass==false) | .reason ] | join("\n---\n")))
+              + "\n(overall reason: " + ((.gradingResult.reason // "") | tostring) + ")\n"
+          ' results.json || echo "jq parse fell through — see artifact"
+      - name: upload results.json
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: promptfoo-results
+          path: evals/promptfoo/results.json
+          if-no-files-found: ignore
