@@ -4,9 +4,17 @@
 #
 # This is the tier that must pass on EVERY change before commit (see AGENTS.md).
 # It proves the structural + safety invariants that don't need an LLM to check:
-# a bad edit to the delete-script generator that dropped the bundle guard, a
+# a bad edit to a delete-script generator that dropped a bundle guard, a
 # malformed manifest, an unparseable script, or a marketplace source pointing at
 # a plugin that isn't there would all be caught here for free.
+#
+# STRUCTURE: sections 1-4 are GENERIC — they auto-discover every plugin's files
+# and hold for any plugin added to this marketplace. The plugin-SPECIFIC safety
+# checks live with each plugin, in plugins/<name>/evals/cheap/checks.sh, and are
+# sourced here per plugin enumerated from marketplace.json (section 5). Discovery
+# FAILS CLOSED: a plugin registered in the marketplace with no cheap eval pack is
+# a failure, not a silent skip — otherwise a new plugin could ship with zero
+# safety coverage and still show green.
 #
 # Exit 0 = all checks pass. Exit 1 = at least one failed.
 set -uo pipefail
@@ -72,51 +80,35 @@ PY
   if [ $? -eq 0 ]; then pass=$((pass+1)); else fail=$((fail+1)); fi
 done < <(find plugins -name 'SKILL.md' -type f | sort)
 
-# --- 5. SAFETY INVARIANT: guarded deletion ---------------------------------
-# The core promise of the graveyard skill: an original repo is deleted only
-# after its bundle is confirmed present in the graveyard. Regenerate a delete
-# script and prove every bundled delete sits behind the bundle-existence guard.
-group "safety invariant — guarded deletion"
-GEN="plugins/graveyard/skills/graveyard/scripts/generate-delete-script.sh"
-
-# 5a. refuses with no args
-if bash "$GEN" >/dev/null 2>&1; then bad "generator should exit non-zero with no args"; else ok "generator refuses empty invocation"; fi
-
-# 5b. bundled delete is guarded by a bundle-existence check
-out="$(bash "$GEN" acme graveyard --bundled "alpha beta")"
-if grep -q 'if gh api "repos/\$OWNER/\$GRAVEYARD/contents/\$r/\$r.bundle"' <<<"$out"; then
-  ok "generated script guards bundled deletes with a bundle-existence check"
-else
-  bad "generated script is MISSING the bundle-existence guard"
-fi
-
-# 5c. with ONLY --bundled, there must be no unguarded delete. The template emits
-#     exactly one 'gh repo delete "$OWNER/$r"' (inside the guarded loop) and one
-#     in the unbundled loop. With no --unbundled, the unbundled loop iterates over
-#     an empty list at run time, but the line still exists in source — so assert
-#     the guard count instead: one guard per bundled loop.
-guards=$(grep -c 'contents/\$r/\$r.bundle' <<<"$out")
-if [ "$guards" -ge 1 ]; then ok "bundle-existence guard present in emitted script"; else bad "no bundle guard in emitted script"; fi
-
-# 5d. unbundled repos are surfaced explicitly, never deleted silently
-out2="$(bash "$GEN" acme graveyard --bundled "alpha" --unbundled "junkfork")"
-if grep -q 'intentionally not bundled' <<<"$out2"; then
-  ok "unbundled deletes are labeled explicitly (no silent deletion)"
-else
-  bad "unbundled deletes are not labeled"
-fi
-
-# --- 6. verify gotcha guard -------------------------------------------------
-# 'git bundle verify' needs a repo context (-C). A regression to the bare form
-# would make every archive fail confusingly. Lock in the -C form.
-group "archive verify uses -C form"
-ARCH="plugins/graveyard/skills/graveyard/scripts/archive-repo.sh"
-if grep -E 'git -C "?\$?\{?m\}?"? bundle verify' "$ARCH" >/dev/null 2>&1 \
-   || grep -E 'git -C .* bundle verify' "$ARCH" >/dev/null 2>&1; then
-  ok "archive-repo.sh verifies bundles with 'git -C <repo> bundle verify'"
-else
-  bad "archive-repo.sh does not use the 'git -C' form for bundle verify"
-fi
+# --- 5. Per-plugin safety checks (fail-closed discovery) -------------------
+# Enumerate every plugin registered in the marketplace and source its cheap eval
+# pack. A registered plugin MUST ship plugins/<source>/evals/cheap/checks.sh —
+# a missing pack is a FAILURE, never a skip, so no plugin can ship without the
+# deterministic safety checks the cheap tier exists to enforce. Each pack runs
+# with cwd = repo root and inherits ok/bad/group above; PLUGIN_NAME / PLUGIN_DIR
+# are exported for packs that prefer plugin-relative paths.
+while IFS= read -r entry; do
+  PLUGIN_NAME="${entry%%$'\t'*}"
+  PLUGIN_SRC="${entry#*$'\t'}"
+  PLUGIN_DIR="$PLUGIN_SRC"
+  pack="$PLUGIN_SRC/evals/cheap/checks.sh"
+  if [ -f "$pack" ]; then
+    export PLUGIN_NAME PLUGIN_DIR
+    # shellcheck source=/dev/null
+    . "$pack"
+  else
+    group "plugin '$PLUGIN_NAME' cheap eval pack"
+    bad "plugin '$PLUGIN_NAME' ($PLUGIN_SRC) has no cheap eval pack at $pack"
+  fi
+done < <(python3 - "$REPO_ROOT" <<'PY'
+import json, os, sys
+root = sys.argv[1]
+mkt = json.load(open(os.path.join(root, ".claude-plugin", "marketplace.json")))
+for p in mkt.get("plugins", []):
+    src = (p.get("source", "") or "").lstrip("./")
+    print(f"{p.get('name','')}\t{src}")
+PY
+)
 
 # --- summary ----------------------------------------------------------------
 printf '\n\033[1msummary:\033[0m %d passed, %d failed\n' "$pass" "$fail"
