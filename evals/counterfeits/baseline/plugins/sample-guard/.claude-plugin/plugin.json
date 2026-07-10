@@ -1,0 +1,14 @@
+{
+  "name": "sample-guard",
+  "version": "0.0.1",
+  "description": "A minimal known-good plugin: the calibration baseline the counterfeit corpus mutates.",
+  "author": {
+    "name": "Jordan Richlen"
+  },
+  "repository": "https://github.com/JRichlen/claude-plugins",
+  "homepage": "https://github.com/JRichlen/claude-plugins",
+  "license": "MIT",
+  "keywords": [],
+  "skills": "./skills/",
+  "commands": "./commands/"
+}

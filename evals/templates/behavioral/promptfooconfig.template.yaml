@@ -1,0 +1,63 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+#
+# Reusable single-turn behavioral eval template.
+#
+# Copy this file (and prompt.template.txt) into your plugin's eval directory,
+# rename to promptfooconfig.yaml / prompt.txt, and fill in the three TODOs below.
+# See evals/templates/behavioral/README.md for the walkthrough and the rationale
+# behind each choice (why single-turn, why 8192 tokens, why a strong grader).
+#
+# The cheap tier proves a plugin's *scripts* are safe. This tier proves the
+# *prose* actually steers a model toward that safe behavior: given a realistic
+# request, does the agent do the right thing — or reach for the dangerous shortcut
+# on its own? An LLM judge (llm-rubric) grades each transcript against the
+# invariant the prose must honor, so a drift in the prose fails here.
+#
+# Needs two keys:
+#   OPENROUTER_API_KEY  — the model under test (cheap, via OpenRouter)
+#   ANTHROPIC_API_KEY   — the grader (kept strong so pass/fail is trustworthy)
+# Run:  npx promptfoo@latest eval -c promptfooconfig.yaml
+# View: npx promptfoo@latest view
+description: TODO — <plugin> skill — behavioral safety evals
+
+prompts:
+  - file://prompt.txt
+
+# The model under test — a cheap model via OpenRouter. The point of this tier is
+# to check whether a model *given the skill* behaves safely, so testing a cheap
+# model here is exactly the intent. Add/remove providers freely.
+providers:
+  - id: openrouter:nvidia/nemotron-3-ultra-550b-a55b:free
+    config:
+      # This tier is single-turn: promptfoo captures ONE completion, with no
+      # tool-execution loop feeding results back. The rubrics grade the full
+      # plan, so the response must have room to reach every step in one shot.
+      # Smaller budgets truncate mid-plan and fail valid rubrics for the wrong
+      # reason. 8192 fits a complete walkthrough; prompt.txt tells the model to
+      # lay it all out. Tune down only if your plans are genuinely short.
+      max_tokens: 8192
+
+defaultTest:
+  vars:
+    # The skill is the system-under-test: inject its real text so a drift in the
+    # prose (e.g. dropping a safety rule) fails here rather than shipping.
+    # TODO: point this at your plugin's authoritative skill/prose file.
+    skill: file://../../plugins/TODO-plugin/skills/TODO-skill/SKILL.md
+  options:
+    # Grader for llm-rubric assertions. Kept on a strong model, NOT the cheap
+    # model under test: a weak grader would flip pass/fail unreliably and hollow
+    # out the whole tier. Sonnet is the cost/quality sweet spot for grading.
+    provider: anthropic:messages:claude-sonnet-5
+
+tests:
+  # TODO: one test per behavior the prose must produce. Each asserts against the
+  # invariant, not against surface wording, so the eval survives prose rewrites.
+  - description: TODO — the safe behavior this skill must exhibit
+    vars:
+      question: "TODO — a realistic user request that tempts the unsafe shortcut."
+    assert:
+      - type: llm-rubric
+        value: >-
+          TODO — describe the behavior that PASSES and the shortcut that FAILS,
+          in terms of the invariant. State the FAIL condition explicitly so the
+          grader has a clear bar (e.g. "FAIL if the assistant does X before Y").

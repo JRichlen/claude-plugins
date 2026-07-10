@@ -4,9 +4,19 @@
 #
 # This is the tier that must pass on EVERY change before commit (see AGENTS.md).
 # It proves the structural + safety invariants that don't need an LLM to check:
-# a bad edit to the delete-script generator that dropped the bundle guard, a
+# a bad edit to a delete-script generator that dropped a bundle guard, a
 # malformed manifest, an unparseable script, or a marketplace source pointing at
 # a plugin that isn't there would all be caught here for free.
+#
+# STRUCTURE: sections 1-9 are GENERIC — they auto-discover every plugin's files
+# and hold for any plugin added to this marketplace (syntax, JSON, marketplace
+# wiring both directions, frontmatter, no unfilled placeholders, real AGENTS.md
+# paths, no red-by-default sentinel shipped, and portability). The plugin-SPECIFIC
+# safety checks live with each plugin, in plugins/<name>/evals/cheap/checks.sh,
+# and are sourced here per plugin enumerated from marketplace.json (section 10).
+# Discovery FAILS CLOSED: a plugin registered in the marketplace with no cheap
+# eval pack is a failure, not a silent skip — otherwise a new plugin could ship
+# with zero safety coverage and still show green.
 #
 # Exit 0 = all checks pass. Exit 1 = at least one failed.
 set -uo pipefail
@@ -72,50 +82,150 @@ PY
   if [ $? -eq 0 ]; then pass=$((pass+1)); else fail=$((fail+1)); fi
 done < <(find plugins -name 'SKILL.md' -type f | sort)
 
-# --- 5. SAFETY INVARIANT: guarded deletion ---------------------------------
-# The core promise of the graveyard skill: an original repo is deleted only
-# after its bundle is confirmed present in the graveyard. Regenerate a delete
-# script and prove every bundled delete sits behind the bundle-existence guard.
-group "safety invariant — guarded deletion"
-GEN="plugins/graveyard/skills/graveyard/scripts/generate-delete-script.sh"
+# --- 5. Reverse lockfile: every plugin dir is registered --------------------
+# Section 3 checks marketplace -> dir (forward). This is the reverse: any
+# plugins/<name>/ that ships a plugin.json MUST have a matching marketplace
+# entry. Without this, a plugin could exist on disk yet be unregistered — and an
+# unregistered plugin is never enumerated in section 10, so its per-plugin safety
+# pack would silently never run. Fail closed on the gap.
+group "reverse lockfile (every plugin dir registered)"
+python3 - "$REPO_ROOT" <<'PY'
+import json, os, sys, glob
+root = sys.argv[1]
+mkt = json.load(open(os.path.join(root, ".claude-plugin", "marketplace.json")))
+registered = { (p.get("source","") or "").lstrip("./").rstrip("/") for p in mkt.get("plugins", []) }
+fail = 0
+for manifest in sorted(glob.glob(os.path.join(root, "plugins", "*", ".claude-plugin", "plugin.json"))):
+    d = os.path.relpath(os.path.dirname(os.path.dirname(manifest)), root)
+    if d in registered:
+        print(f"  PASS {d} registered in marketplace")
+    else:
+        print(f"  FAIL {d} has a plugin.json but no marketplace entry"); fail += 1
+sys.exit(1 if fail else 0)
+PY
+if [ $? -eq 0 ]; then pass=$((pass+1)); else fail=$((fail+1)); fi
 
-# 5a. refuses with no args
-if bash "$GEN" >/dev/null 2>&1; then bad "generator should exit non-zero with no args"; else ok "generator refuses empty invocation"; fi
+# --- 6. No unfilled placeholder tokens in shipped prose/manifests -----------
+# The scaffolder fills every {{token}} at generation time. A surviving {{...}} in
+# a shipped *.md or *.json means a plugin went out with an unfilled template — a
+# broken manifest or a hole in the prose. Scripts are intentionally excluded: the
+# generator and its dogfood legitimately mention "{{placeholder}}" as machinery;
+# they describe the token, they don't ship it.
+group "no unfilled {{placeholder}} tokens (prose/manifests)"
+ph=0
+while IFS= read -r f; do
+  if grep -qF '{{' "$f"; then bad "$f still contains an unfilled {{...}} token"; ph=$((ph+1)); fi
+done < <(find plugins \( -name '*.md' -o -name '*.json' \) -type f | sort)
+[ "$ph" -eq 0 ] && ok "no unfilled placeholder tokens in any plugin prose or manifest"
 
-# 5b. bundled delete is guarded by a bundle-existence check
-out="$(bash "$GEN" acme graveyard --bundled "alpha beta")"
-if grep -q 'if gh api "repos/\$OWNER/\$GRAVEYARD/contents/\$r/\$r.bundle"' <<<"$out"; then
-  ok "generated script guards bundled deletes with a bundle-existence check"
-else
-  bad "generated script is MISSING the bundle-existence guard"
-fi
+# --- 7. AGENTS.md references only real paths --------------------------------
+# A plugin's AGENTS.md is the map another harness follows into the plugin. A
+# backticked path token that doesn't resolve is a broken map. Only tokens that
+# contain a "/" are treated as paths (a bare `SKILL.md` is a generic reference,
+# and templates like `skills/<name>/...` carry a "<" and are skipped); each real
+# path is resolved plugin-dir-first, then repo-root.
+group "AGENTS.md references resolve to real files"
+python3 - "$REPO_ROOT" <<'PY'
+import os, re, sys
+root = sys.argv[1]
+tok = re.compile(r'`([^`]+)`')
+pathish = re.compile(r'^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)+$')
+fail = 0
+for base, _, files in os.walk(os.path.join(root, "plugins")):
+    if "AGENTS.md" not in files: continue
+    agents = os.path.join(base, "AGENTS.md")
+    if os.path.islink(agents): continue
+    for t in (m.strip() for m in tok.findall(open(agents).read())):
+        if not pathish.match(t): continue
+        if os.path.exists(os.path.join(base, t)) or os.path.exists(os.path.join(root, t)):
+            continue
+        print(f"  FAIL {os.path.relpath(agents, root)} references `{t}` which does not exist"); fail += 1
+if fail == 0:
+    print("  PASS every backticked path in every plugin AGENTS.md resolves")
+sys.exit(1 if fail else 0)
+PY
+if [ $? -eq 0 ]; then pass=$((pass+1)); else fail=$((fail+1)); fi
 
-# 5c. with ONLY --bundled, there must be no unguarded delete. The template emits
-#     exactly one 'gh repo delete "$OWNER/$r"' (inside the guarded loop) and one
-#     in the unbundled loop. With no --unbundled, the unbundled loop iterates over
-#     an empty list at run time, but the line still exists in source — so assert
-#     the guard count instead: one guard per bundled loop.
-guards=$(grep -c 'contents/\$r/\$r.bundle' <<<"$out")
-if [ "$guards" -ge 1 ]; then ok "bundle-existence guard present in emitted script"; else bad "no bundle guard in emitted script"; fi
+# --- 8. Red-by-default sentinel never ships ---------------------------------
+# The scaffolder writes a UUID-shaped sentinel into each new plugin's checks.sh
+# so a freshly scaffolded (unimplemented) plugin is RED until a human writes real
+# checks. If that sentinel survives into a committed plugin, the plugin shipped
+# with a placeholder eval — fail closed. The generator itself legitimately embeds
+# the literal, so any file marked SCAFFOLD-SENTINEL-SOURCE is exempt.
+group "no red-by-default sentinel in shipped plugins"
+SENTINEL='SCAFFOLD-UNIMPLEMENTED-b3f1c2a4-7d6e-4f0a-9c2b-1e5d8a4f6c30'
+st=0
+while IFS= read -r f; do
+  grep -q 'SCAFFOLD-SENTINEL-SOURCE' "$f" && continue
+  bad "$f still carries the red-by-default sentinel (unimplemented eval shipped)"; st=$((st+1))
+done < <(grep -rlF "$SENTINEL" plugins 2>/dev/null)
+[ "$st" -eq 0 ] && ok "no shipped plugin carries the unimplemented sentinel"
 
-# 5d. unbundled repos are surfaced explicitly, never deleted silently
-out2="$(bash "$GEN" acme graveyard --bundled "alpha" --unbundled "junkfork")"
-if grep -q 'intentionally not bundled' <<<"$out2"; then
-  ok "unbundled deletes are labeled explicitly (no silent deletion)"
-else
-  bad "unbundled deletes are not labeled"
-fi
+# --- 9. Portability lint (per plugin) ---------------------------------------
+# Prose that leans on Claude-Code-only machinery (hooks, subagents, the Workflow
+# tool's parallel()/pipeline()) is allowed only with a portability caveat. The
+# shared linter enforces that per plugin dir.
+group "portability lint (per plugin)"
+while IFS= read -r d; do
+  if out="$(evals/cheap/portability-lint.sh "$d" 2>&1)"; then
+    ok "portability: $d"
+  else
+    bad "portability: $d"
+    printf '%s\n' "$out" | sed 's/^/    /'
+  fi
+done < <(find plugins -mindepth 1 -maxdepth 1 -type d | sort)
 
-# --- 6. verify gotcha guard -------------------------------------------------
-# 'git bundle verify' needs a repo context (-C). A regression to the bare form
-# would make every archive fail confusingly. Lock in the -C form.
-group "archive verify uses -C form"
-ARCH="plugins/graveyard/skills/graveyard/scripts/archive-repo.sh"
-if grep -E 'git -C "?\$?\{?m\}?"? bundle verify' "$ARCH" >/dev/null 2>&1 \
-   || grep -E 'git -C .* bundle verify' "$ARCH" >/dev/null 2>&1; then
-  ok "archive-repo.sh verifies bundles with 'git -C <repo> bundle verify'"
-else
-  bad "archive-repo.sh does not use the 'git -C' form for bundle verify"
+# --- 10. Per-plugin safety checks (fail-closed discovery) ------------------
+# Enumerate every plugin registered in the marketplace and source its cheap eval
+# pack. A registered plugin MUST ship plugins/<source>/evals/cheap/checks.sh —
+# a missing pack is a FAILURE, never a skip, so no plugin can ship without the
+# deterministic safety checks the cheap tier exists to enforce. Each pack runs
+# with cwd = repo root and inherits ok/bad/group above; PLUGIN_NAME / PLUGIN_DIR
+# are exported for packs that prefer plugin-relative paths.
+while IFS= read -r entry; do
+  PLUGIN_NAME="${entry%%$'\t'*}"
+  PLUGIN_SRC="${entry#*$'\t'}"
+  PLUGIN_DIR="$PLUGIN_SRC"
+  pack="$PLUGIN_SRC/evals/cheap/checks.sh"
+  if [ -f "$pack" ]; then
+    export PLUGIN_NAME PLUGIN_DIR
+    # shellcheck source=/dev/null
+    . "$pack"
+  else
+    group "plugin '$PLUGIN_NAME' cheap eval pack"
+    bad "plugin '$PLUGIN_NAME' ($PLUGIN_SRC) has no cheap eval pack at $pack"
+  fi
+done < <(python3 - "$REPO_ROOT" <<'PY'
+import json, os, sys
+root = sys.argv[1]
+mkt = json.load(open(os.path.join(root, ".claude-plugin", "marketplace.json")))
+for p in mkt.get("plugins", []):
+    src = (p.get("source", "") or "").lstrip("./")
+    print(f"{p.get('name','')}\t{src}")
+PY
+)
+
+# --- 11. Branch-protection lock (winner #15) --------------------------------
+# The four required status checks and the two deep-tier safety paths are frozen
+# in ci/required-checks.json; ci/check_branch_protection.py asserts each still
+# appears verbatim in .github/workflows/evals.yml, so branch protection can't
+# drift away from what CI emits. This is a REPO-level gate, not a per-plugin one,
+# and it fires only when the workflow exists at the repo root — so it's active in
+# the real repo (fail-closed on drift) yet inert in the synthetic counterfeit
+# root, which carries neither .github/ nor ci/. FAIL substring: "branch-protection drift".
+if [ -f ".github/workflows/evals.yml" ]; then
+  group "branch-protection lock (required checks in sync with workflow)"
+  if python3 ci/check_branch_protection.py --self-test >/dev/null 2>&1; then
+    ok "check_branch_protection.py self-test"
+  else
+    bad "check_branch_protection.py self-test failed"
+  fi
+  if out="$(python3 ci/check_branch_protection.py --repo . 2>&1)"; then
+    ok "branch protection in sync with .github/workflows/evals.yml"
+  else
+    bad "branch-protection drift between ci/required-checks.json and the workflow"
+    printf '%s\n' "$out" | sed 's/^/    /'
+  fi
 fi
 
 # --- summary ----------------------------------------------------------------

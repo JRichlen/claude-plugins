@@ -1,0 +1,21 @@
+# Vendored upstream: the skill-creator harness this plugin WRAPS (winner #9).
+#
+# We do NOT fork skill-creator. Forking would silently absorb every upstream
+# behavior change into our tree the next time someone merged, and there'd be no
+# single line to point at that says "this is the version we build on." Instead we
+# pin it to an exact commit and wrap it. An upstream improvement then becomes a
+# one-line SHA bump here — reviewable in a diff, revertible in a revert — not a
+# merge. See ../references/skill-iteration.md for how the wrap composes with the
+# file-based handoff seam and the advisory delta gate.
+#
+# To bump: set `sha` to the new commit, refresh `retrieved`, note what changed in
+# the commit message, and re-run the plugin-factory cheap pack — it asserts this
+# file still parses and that `sha` is a full 40-hex commit id (a branch name or a
+# short sha here is a silent drift waiting to happen, so the gate rejects it).
+#
+# Fields are `key: value`, one per line. Lines starting with `#` are comments.
+repo: anthropics/skills
+path: skills/skill-creator/
+ref: main
+sha: 9d2f1ae187231d8199c64b5b762e1bdf2244733d
+retrieved: 2026-07-10
