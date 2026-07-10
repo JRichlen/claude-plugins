@@ -63,9 +63,15 @@ agent_config() {
   esac
 }
 
-# Read result.json and print the reward for its first trial, or ERR:<reason>.
+# Read result.json and print the reward for its single trial, or ERR:<reason>.
 # reward.txt (a bare 1/0) is surfaced by pier as rewards.reward — see
 # pier.verifier: {"reward": float(reward.txt)}.
+#
+# pier 0.3.0 writes result.json with `exclude_trial_results=True` (job.py), so
+# the persisted top-level `trial_results` is ALWAYS empty. The reward instead
+# lives in stats.evals["<agent>__<model>__<dataset>"].reward_stats, which maps
+# reward-name -> {reward-value: [trial names]} (see JobStats.increment). We read
+# it there, and fall back to trial_results for any older/streaming shape.
 reward_of() {
   python3 - "$1" <<'PY'
 import json, sys
@@ -73,6 +79,31 @@ try:
     d = json.load(open(sys.argv[1]))
 except Exception:
     print("ERR:noresult"); raise SystemExit
+
+def from_eval(ev):
+    # A sandbox/infra failure is recorded as an exception on the eval — surface
+    # it rather than trusting any partial reward, same intent as the old
+    # exception_info check.
+    if ev.get("n_errors"):
+        exc = ev.get("exception_stats") or {}
+        return "ERR:" + (next(iter(exc), "exception"))
+    rs = (ev.get("reward_stats") or {}).get("reward") or {}
+    if not rs:
+        return "ERR:noreward"
+    # rs maps reward-value -> [trial names]; our runs are one trial, so pick the
+    # value whose trial list is non-empty (JSON keys are strings, e.g. "1.0").
+    for val, trials in rs.items():
+        if trials:
+            return str(val)
+    return str(next(iter(rs)))
+
+evals = ((d.get("stats") or {}).get("evals")) or {}
+if evals:
+    # One agent + one task => exactly one evals key.
+    for ev in evals.values():
+        print(from_eval(ev)); raise SystemExit
+
+# Fallback: older shape that kept a populated trial_results list.
 trials = d.get("trial_results") or []
 if not trials:
     print("ERR:notrials"); raise SystemExit
