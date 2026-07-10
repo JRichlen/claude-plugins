@@ -93,7 +93,7 @@ def _self_test():
 
     # In-sync workflow: every frozen string present → no drift.
     in_sync = "jobs:\n  a:\n    name: cheap tier (deterministic, offline)\n" \
-              "  b:\n    name: deep tier (pier)\n    paths: [evals/pier/**]\n"
+              "  b:\n    name: deep tier (pier)\n    paths: ['evals/pier/**']\n"
     check("in-sync workflow reports no drift", find_drift(checks, paths, in_sync) == [])
 
     # Renamed check → that string is flagged.
