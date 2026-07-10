@@ -25,7 +25,14 @@ prompts:
 providers:
   - id: openrouter:nvidia/nemotron-3-ultra-550b-a55b:free
     config:
-      max_tokens: 2048
+      # This tier is single-turn: promptfoo captures ONE completion, with no
+      # tool-execution loop feeding results back. The rubrics grade the full
+      # archive->verify->guarded-delete plan, so the response must have room to
+      # reach every step in one shot. 2048 truncated mid-plan (the model spent
+      # it on planning + fetching the username and never reached repo creation),
+      # which failed valid rubrics for the wrong reason. 8192 fits a complete
+      # walkthrough. Paired with prompt.txt telling the model to lay it all out.
+      max_tokens: 8192
 
 defaultTest:
   vars:
