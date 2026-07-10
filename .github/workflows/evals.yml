@@ -102,3 +102,99 @@ jobs:
           name: promptfoo-results
           path: evals/promptfoo/results.json
           if-no-files-found: ignore
+
+  # ── deep tier (pier) ──────────────────────────────────────────────────────
+  # The deep tier is a real sandboxed cross-harness run and costs money + minutes,
+  # so it does NOT run on every PR. It fires only when a PR touches the safety
+  # surface (the guard scripts or the pier harness itself), and even then the
+  # actual run is held behind a manual approval on the `deep-evals` environment.
+  # The always-reporting `deep` job below is the required status check, so trivial
+  # PRs go green instantly while the expensive job is simply skipped.
+
+  deep-detect:
+    name: deep tier — detect safety-path changes
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.filter.outputs.safety }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          # Touching the guard logic or the harness that validates it is the only
+          # thing that can change deep-tier behavior — scope the run to exactly that.
+          filters: |
+            safety:
+              - 'plugins/graveyard/skills/graveyard/scripts/**'
+              - 'evals/pier/**'
+
+  deep-run:
+    name: deep tier — pier run (safety paths)
+    needs: [deep-detect]
+    # Run only when the safety surface changed AND secrets are available (fork PRs
+    # don't get secrets, so they can't run pier — same policy as the other tiers).
+    if: >-
+      needs.deep-detect.outputs.changed == 'true' &&
+      (github.event_name != 'pull_request' ||
+       github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    # Protected environment: a maintainer must click Approve before this job runs,
+    # so nothing is spent until a human okays it. Trivial PRs never reach here.
+    environment: deep-evals
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: install pier
+        run: |
+          set -euo pipefail
+          pipx install datacurve-pier
+          pier --version
+      - name: stage provider keys
+        env:
+          # Mapped through env (never interpolated into the script body) so the
+          # secret can't leak into logs via the shell command line.
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+            echo "::error::ANTHROPIC_API_KEY secret is not set — add it in repo Settings > Secrets."
+            exit 1
+          fi
+          # run.sh reads keys from evals/pier/.env (git-ignored). claude-code reaches
+          # api.anthropic.com via the agent network allowlist; the sandbox stays offline.
+          printf 'ANTHROPIC_API_KEY=%s\n' "$ANTHROPIC_API_KEY" > evals/pier/.env
+      - name: run deep tier (claude-code + calibration floor)
+        run: PIER_AGENTS="claude-code oracle nop" evals/pier/run.sh --yes
+
+  deep:
+    name: deep tier (pier)
+    # This is the REQUIRED status check. It always runs and always reports, so the
+    # branch-protection gate is never left hanging on a job that was conditionally
+    # skipped. It fails only if the pier run itself failed.
+    needs: [deep-detect, deep-run]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: assess deep tier outcome
+        env:
+          DETECT: ${{ needs.deep-detect.result }}
+          RUN: ${{ needs.deep-run.result }}
+          CHANGED: ${{ needs.deep-detect.outputs.changed }}
+        run: |
+          set -euo pipefail
+          echo "detect=$DETECT  run=$RUN  safety-paths-changed=$CHANGED"
+          if [ "$DETECT" != "success" ]; then
+            echo "::error::deep-detect did not succeed ($DETECT) — cannot trust the gate."
+            exit 1
+          fi
+          case "$RUN" in
+            success)
+              echo "deep tier: pier run passed." ;;
+            skipped)
+              echo "deep tier: no safety-path change (or fork PR) — pier run skipped, reporting green." ;;
+            *)
+              echo "::error::deep tier pier run did not pass (deep-run=$RUN)."
+              exit 1 ;;
+          esac

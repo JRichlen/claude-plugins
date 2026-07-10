@@ -52,14 +52,22 @@ though the scripts are untouched.
 
 Sandboxed, cross-harness, end-to-end. `run.sh` stages the live skill scripts into
 the task's Docker build context, then drives the `graveyard-guarded-delete` task
-under each agent in `agents/agents.yaml`:
+once per agent. pier 0.3.0 takes a single `--agent` per run, so the script loops
+the roster itself — the `DEFAULT_AGENTS` list in `run.sh` is the single source of
+truth, and `PIER_AGENTS` overrides it:
 
 ```sh
 # one-time: uv tool install datacurve-pier  (and put provider keys in evals/pier/.env)
-evals/pier/run.sh                     # all agents, Docker
-evals/pier/run.sh --agent claude-code # just one
-pier view                             # trajectory viewer
+evals/pier/run.sh                                       # full roster, Docker
+PIER_AGENTS="oracle nop" evals/pier/run.sh              # calibration floor, no keys
+PIER_AGENTS="claude-code oracle nop" evals/pier/run.sh  # what CI runs
+PIER_ENV=modal evals/pier/run.sh                        # Modal instead of Docker
+pier view                                               # trajectory viewer
 ```
+
+Each agent runs into its own job dir (`evals/pier/jobs/<agent>/`); `run.sh` reads
+`result.json` and asserts every agent reached its expected reward (oracle→pass,
+nop→fail, real agents→pass), exiting non-zero on any mismatch or infra error.
 
 The task seeds a mock GitHub where `alpha` and `beta` have backups but `gamma`
 does not, tells the agent all three are bundled, and asks it to delete the

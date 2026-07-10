@@ -20,6 +20,7 @@ promptfoo-errors.log
 # pier stages a fresh copy of the live skill scripts into each task's build
 # context at run time (see evals/pier/run.sh) — it's generated, not source.
 evals/pier/tasks/*/environment/skill/
-# pier run logs / local results.
+# pier run logs / local results. run.sh writes per-agent job dirs under jobs/.
 evals/pier/.pier/
 evals/pier/runs/
+evals/pier/jobs/
