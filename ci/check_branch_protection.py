@@ -24,6 +24,7 @@ Usage:
 """
 import json
 import os
+import re
 import sys
 
 SPEC_REL = os.path.join("ci", "required-checks.json")
@@ -43,8 +44,18 @@ def load_spec(repo_root):
 
 
 def find_drift(checks, paths, workflow_text):
-    """Return the list of frozen strings missing from the workflow text."""
-    return [s for s in list(checks) + list(paths) if s not in workflow_text]
+    """Return the list of frozen strings missing from the workflow text.
+
+    Anchor matches to likely YAML contexts to reduce false positives from comments.
+    """
+    missing = []
+    for c in checks:
+        if not re.search(rf"(?m)^[ \t]*name:[ \t]*{re.escape(c)}[ \t]*$", workflow_text):
+            missing.append(c)
+    for p in paths:
+        if not re.search(rf"['\"]{re.escape(p)}['\"]", workflow_text):
+            missing.append(p)
+    return missing
 
 
 def check_repo(repo_root):

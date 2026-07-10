@@ -98,28 +98,33 @@ mkdir -p "$PLUGIN_DIR/.claude-plugin" \
          "$PLUGIN_DIR/evals/cheap"
 
 # plugin.json (version 0.0.1 — a scaffold is pre-release until implemented)
-cat > "$PLUGIN_DIR/.claude-plugin/plugin.json" <<JSON
-{
-  "name": "$NAME",
+python3 - "$PLUGIN_DIR/.claude-plugin/plugin.json" "$NAME" "$DESC" "$AUTHOR" <<'PY'
+import json, sys
+out, name, desc, author = sys.argv[1:5]
+data = {
+  "name": name,
   "version": "0.0.1",
-  "description": "$DESC",
-  "author": {
-    "name": "$AUTHOR"
-  },
+  "description": desc,
+  "author": {"name": author},
   "repository": "https://github.com/JRichlen/claude-plugins",
-  "homepage": "https://github.com/JRichlen/claude-plugins/tree/main/plugins/$NAME",
+  "homepage": f"https://github.com/JRichlen/claude-plugins/tree/main/plugins/{name}",
   "license": "MIT",
   "keywords": [],
   "skills": "./skills/",
-  "commands": "./commands/"
+  "commands": "./commands/",
 }
-JSON
+with open(out, "w") as f:
+  json.dump(data, f, indent=2)
+  f.write("\n")
+PY
 
 # SKILL.md — invariant-first (#3): the invariant leads, before any workflow prose.
 cat > "$PLUGIN_DIR/skills/$NAME/SKILL.md" <<SKILL
 ---
 name: $NAME
-description: $DESC Use this skill whenever the user is working with $NAME.
+description: >-
+  $DESC
+  Use this skill whenever the user is working with $NAME.
 ---
 
 # $NAME

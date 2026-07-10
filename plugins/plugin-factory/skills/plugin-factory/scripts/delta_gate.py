@@ -147,15 +147,21 @@ def _self_test():
 def main(argv):
     if "--self-test" in argv:
         return _self_test()
-    args = [a for a in argv if not a.startswith("--")]
+
     threshold = DEFAULT_THRESHOLD
     if "--threshold" in argv:
-        threshold = float(argv[argv.index("--threshold") + 1])
-        args = [a for a in args if a != argv[argv.index("--threshold") + 1]]
-    if not args:
+        i = argv.index("--threshold")
+        if i + 1 >= len(argv):
+            print("error: --threshold needs a value", file=sys.stderr)
+            return 2
+        threshold = float(argv[i + 1])
+        argv = argv[:i] + argv[i + 2:]
+
+    if not argv:
         print(__doc__)
         return 2
-    with open(args[0]) as fh:
+
+    with open(argv[0]) as fh:
         bench = json.load(fh)
     would = report(bench, threshold)
     # Advisory: always green regardless of the would-block verdict.

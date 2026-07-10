@@ -101,7 +101,7 @@ const perDimension = (await pipeline(
             `${CTX}\n\nAdversarially verify the claim below. Default to ` +
               `verdict "refuted" unless it is clearly supported.\n\nCLAIM: ${c}`,
             { label: `verify:${d.key}`, phase: 'Verify', schema: VERDICT_SCHEMA }
-          ).then((v) => ({ claim: c, verdict: v }))
+          ).then((v) => ({ ...v, claim: c }))
         )
     ).then((verdicts) => ({
       dimension: d.key,
