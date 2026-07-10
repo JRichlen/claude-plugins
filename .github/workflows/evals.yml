@@ -21,6 +21,11 @@ jobs:
       - uses: actions/checkout@v4
       - name: run cheap eval gate
         run: evals/cheap/run.sh
+      - name: prove the cheap gate discriminates (counterfeit corpus)
+        # A green cheap tier only shows GOOD plugins pass. This meta-test proves the
+        # other half — that the gate REJECTS broken plugins, for the right reason —
+        # so the always-on gate can't silently degrade into a rubber stamp.
+        run: evals/counterfeits/run.sh
 
   grader-model:
     # Confirms the Anthropic grader model configured in promptfooconfig.yaml is a
@@ -42,9 +47,12 @@ jobs:
             echo "::error::ANTHROPIC_API_KEY secret is not set — add it in repo Settings > Secrets."
             exit 1
           fi
-          # Parse the grader slug straight from the config so this never drifts.
-          grader=$(sed -n 's/.*provider:[[:space:]]*anthropic:messages:\([^[:space:]]*\).*/\1/p' \
-            evals/promptfoo/promptfooconfig.yaml | head -n1)
+          # Resolve the grader slug straight from the config so this never drifts.
+          # A python parse is robust to YAML formatting the old single-line sed was
+          # not — quoting, indentation, or the value wrapping onto the next line.
+          # The grader is the sole `anthropic:messages:` provider (the subject model
+          # is an `openrouter:` slug), so that marker identifies it unambiguously.
+          grader=$(python3 -c 'import re,sys; t=open("evals/promptfoo/promptfooconfig.yaml").read(); m=re.search(r"anthropic:messages:([A-Za-z0-9._-]+)", t); print(m.group(1) if m else "")')
           if [ -z "$grader" ]; then
             echo "::error::could not find an 'anthropic:messages:<model>' grader in promptfooconfig.yaml"
             exit 1

@@ -26,6 +26,30 @@ guards bundled deletes and labels unbundled ones; and `archive-repo.sh` still
 uses the `git -C <mirror> bundle verify` form (the bare form silently breaks).
 Exit 0 = all pass. This is the gate that must be green before any commit.
 
+### proving the cheap gate discriminates — `evals/counterfeits/`
+
+A green cheap tier only shows **good** plugins pass. A gate that never rejected
+anything would also pass every good plugin, so that says nothing about whether the
+gate actually catches bad ones. The counterfeit corpus supplies the other half: a
+set of deliberately broken plugins, each of which the cheap tier **must reject,
+and reject for the right reason**.
+
+```sh
+evals/counterfeits/run.sh   # exit 0 = baseline green AND every counterfeit rejected
+```
+
+It keeps ONE all-valid `baseline/` plugin (invisible to the real tier — it lives
+under `evals/`, not `plugins/`) and, per fixture, a `mutate.sh` that breaks a
+**copy** at runtime inside a temp dir, so nothing broken ever persists to trip the
+always-on tier. The runner first asserts the baseline is green (the **calibration**
+step — if a known-good plugin fails, every rejection below is meaningless), then
+for each fixture asserts the tier exits non-zero **and** prints that fixture's
+expected failure substring. One fixture per cheap-tier gate, plus a
+`weakened-guard` fixture that leaves the plugin structurally perfect and only
+weakens the safety invariant — proving fail-closed pack discovery does more than
+confirm a file exists. See `evals/counterfeits/README.md`. CI runs this right
+after the cheap gate, so the gate can't silently decay into a rubber stamp.
+
 ## behavioral — `evals/promptfoo/`
 
 ```sh
@@ -47,6 +71,11 @@ each response honors an invariant (no self-delete, verify-before-delete, private
 default, full-history mirror, empty/fork confirmation, correct `bundle verify`
 form). Editing the skill prose in a way that weakens the guidance fails here even
 though the scripts are untouched.
+
+> **Adding a behavioral tier to another plugin?** Start from the reusable
+> single-turn template in `evals/templates/behavioral/` — copy the config +
+> prompt, fill three TODOs, and you have a working suite with the grader,
+> `max_tokens`, and single-turn framing already set. See that directory's README.
 
 ## deep — `evals/pier/`
 

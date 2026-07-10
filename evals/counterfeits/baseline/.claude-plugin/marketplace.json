@@ -1,0 +1,20 @@
+{
+  "name": "jrichlen",
+  "description": "Synthetic known-good marketplace used by the counterfeit corpus. Not a real marketplace — it exists only so the cheap tier has a valid, minimal fixture to calibrate against.",
+  "owner": {
+    "name": "Jordan Richlen"
+  },
+  "plugins": [
+    {
+      "name": "sample-guard",
+      "description": "A minimal known-good plugin: the calibration baseline the counterfeit corpus mutates. Emits a guarded destructive script, mirroring the graveyard discipline in miniature.",
+      "version": "0.0.1",
+      "source": "./plugins/sample-guard",
+      "author": {
+        "name": "Jordan Richlen"
+      },
+      "license": "MIT",
+      "keywords": []
+    }
+  ]
+}
