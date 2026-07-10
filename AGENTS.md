@@ -62,15 +62,23 @@ An LLM judge confirms a model *given the skill* still archives-then-verifies and
 hands the user a guarded delete script instead of self-deleting.
 
 **3. deep — when you change a safety invariant, the archive/delete scripts, or cut a release.**
-Sandboxed, cross-harness, end-to-end. Run pier:
+Sandboxed, cross-harness, end-to-end. pier 0.3.0 runs one agent per invocation, so
+`run.sh` loops the roster itself and asserts each agent's expected reward:
 
 ```sh
-evals/pier/run.sh       # real agents in Docker honor the guard end-to-end
+PIER_AGENTS="oracle nop" evals/pier/run.sh             # calibration floor, no keys
+evals/pier/run.sh                                      # full roster in Docker
 ```
 
 This is the tier that proves the invariant holds no matter which harness
 (claude-code, codex, gemini, cursor) drives the skill — the cross-harness
 guarantee this repo exists to keep.
+
+In CI the deep tier is a **required** check (`deep tier (pier)`) but the actual
+pier run is gated: it fires only when a PR touches `plugins/graveyard/skills/
+graveyard/scripts/**` or `evals/pier/**`, and even then pauses on the protected
+`deep-evals` environment until a maintainer approves it — so nothing is spent on
+trivial PRs. Non-safety PRs report the deep tier green instantly.
 
 ### The invariant every tier defends
 
