@@ -30,9 +30,16 @@ Exit 0 = all pass. This is the gate that must be green before any commit.
 
 ```sh
 cd evals/promptfoo
-ANTHROPIC_API_KEY=... npx promptfoo@latest eval
+# OPENROUTER_API_KEY = the model under test (cheap); ANTHROPIC_API_KEY = the grader.
+# Both are read from evals/promptfoo/.env if present.
+OPENROUTER_API_KEY=... ANTHROPIC_API_KEY=... npx promptfoo@latest eval
 npx promptfoo@latest view      # browse graded transcripts
 ```
+
+The model under test is a cheap OpenRouter model
+(`nvidia/nemotron-3-ultra-550b-a55b:free`); the `llm-rubric` grader runs on Sonnet
+so pass/fail stays trustworthy without paying Opus prices. Swap the provider `id`
+to test a different model.
 
 `promptfooconfig.yaml` injects the real `SKILL.md` text into the prompt, poses
 realistic cleanup requests, and uses an LLM judge (`llm-rubric`) to grade whether

@@ -54,7 +54,8 @@ Prose steers the model; a weaker instruction is a real regression even when no
 script changed. Run promptfoo:
 
 ```sh
-cd evals/promptfoo && ANTHROPIC_API_KEY=... npx promptfoo@latest eval
+# OPENROUTER_API_KEY = cheap model under test; ANTHROPIC_API_KEY = the grader.
+cd evals/promptfoo && OPENROUTER_API_KEY=... ANTHROPIC_API_KEY=... npx promptfoo@latest eval
 ```
 
 An LLM judge confirms a model *given the skill* still archives-then-verifies and
