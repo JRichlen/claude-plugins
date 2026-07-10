@@ -156,12 +156,11 @@ for agent in $AGENTS; do
   run_rc=$?
   set -e
 
-  result_json="$(ls -1 "$job_dir"/*/result.json 2>/dev/null | head -n1 || true)"
-  if [ -z "$result_json" ]; then
-    reward="ERR:noresult"
-  else
-    reward="$(reward_of "$result_json")"
-  fi
+  # pier writes the aggregate JobResult straight to <job_dir>/result.json (its
+  # own console says "Results written to .../jobs/<agent>/result.json"); there is
+  # no per-trial subdir. reward_of() reads the reward out of that file's
+  # stats.evals.
+  reward="$(reward_of "$job_dir/result.json")"
   case "$reward" in
     ERR:*) verdict="ERROR ($reward)"; overall=1 ;;
     *)
