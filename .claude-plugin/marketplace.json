@@ -15,6 +15,17 @@
       },
       "license": "MIT",
       "keywords": ["github", "backup", "archive", "git-bundle", "cleanup"]
+    },
+    {
+      "name": "orchestration-patterns",
+      "description": "Two reusable multi-agent orchestration templates for research-and-verify work on Claude Code's Workflow tool: fan out research over dimensions, then adversarially verify the claims that research surfaces so plausible-but-wrong findings don't survive. Ships a shared skill, two workflow-script templates, and a worked example.",
+      "version": "1.0.0",
+      "source": "./plugins/orchestration-patterns",
+      "author": {
+        "name": "Jordan Richlen"
+      },
+      "license": "MIT",
+      "keywords": ["orchestration", "multi-agent", "workflow", "research", "verification"]
     }
   ]
 }
