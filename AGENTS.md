@@ -55,7 +55,7 @@ script changed. Run promptfoo:
 
 ```sh
 # OPENROUTER_API_KEY = cheap model under test; ANTHROPIC_API_KEY = the grader.
-cd evals/promptfoo && OPENROUTER_API_KEY=... ANTHROPIC_API_KEY=... npx promptfoo@latest eval
+cd plugins/graveyard/evals/promptfoo && OPENROUTER_API_KEY=... ANTHROPIC_API_KEY=... npx promptfoo@latest eval
 ```
 
 An LLM judge confirms a model *given the skill* still archives-then-verifies and
@@ -66,8 +66,8 @@ Sandboxed, cross-harness, end-to-end. pier 0.3.0 runs one agent per invocation, 
 `run.sh` loops the roster itself and asserts each agent's expected reward:
 
 ```sh
-PIER_AGENTS="oracle nop" evals/pier/run.sh             # calibration floor, no keys
-evals/pier/run.sh                                      # full roster in Docker
+PIER_AGENTS="oracle nop" plugins/graveyard/evals/pier/run.sh   # calibration floor, no keys
+plugins/graveyard/evals/pier/run.sh                            # full roster in Docker
 ```
 
 This is the tier that proves the invariant holds no matter which harness
@@ -76,7 +76,7 @@ guarantee this repo exists to keep.
 
 In CI the deep tier is a **required** check (`deep tier (pier)`) but the actual
 pier run is gated: it fires only when a PR touches `plugins/graveyard/skills/
-graveyard/scripts/**` or `evals/pier/**`, and even then pauses on the protected
+graveyard/scripts/**` or `plugins/graveyard/evals/pier/**`, and even then pauses on the protected
 `deep-evals` environment until a maintainer approves it — so nothing is spent on
 trivial PRs. Non-safety PRs report the deep tier green instantly.
 

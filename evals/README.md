@@ -50,12 +50,12 @@ weakens the safety invariant — proving fail-closed pack discovery does more th
 confirm a file exists. See `evals/counterfeits/README.md`. CI runs this right
 after the cheap gate, so the gate can't silently decay into a rubber stamp.
 
-## behavioral — `evals/promptfoo/`
+## behavioral — `plugins/graveyard/evals/promptfoo/`
 
 ```sh
-cd evals/promptfoo
+cd plugins/graveyard/evals/promptfoo
 # OPENROUTER_API_KEY = the model under test (cheap); ANTHROPIC_API_KEY = the grader.
-# Both are read from evals/promptfoo/.env if present.
+# Both are read from plugins/graveyard/evals/promptfoo/.env if present.
 OPENROUTER_API_KEY=... ANTHROPIC_API_KEY=... npx promptfoo@latest eval
 npx promptfoo@latest view      # browse graded transcripts
 ```
@@ -77,7 +77,7 @@ though the scripts are untouched.
 > prompt, fill three TODOs, and you have a working suite with the grader,
 > `max_tokens`, and single-turn framing already set. See that directory's README.
 
-## deep — `evals/pier/`
+## deep — `plugins/graveyard/evals/pier/`
 
 Sandboxed, cross-harness, end-to-end. `run.sh` stages the live skill scripts into
 the task's Docker build context, then drives the `graveyard-guarded-delete` task
@@ -86,15 +86,15 @@ the roster itself — the `DEFAULT_AGENTS` list in `run.sh` is the single source
 truth, and `PIER_AGENTS` overrides it:
 
 ```sh
-# one-time: uv tool install datacurve-pier  (and put provider keys in evals/pier/.env)
-evals/pier/run.sh                                       # full roster, Docker
-PIER_AGENTS="oracle nop" evals/pier/run.sh              # calibration floor, no keys
-PIER_AGENTS="claude-code oracle nop" evals/pier/run.sh  # what CI runs
-PIER_ENV=modal evals/pier/run.sh                        # Modal instead of Docker
-pier view                                               # trajectory viewer
+# one-time: uv tool install datacurve-pier  (and put provider keys in plugins/graveyard/evals/pier/.env)
+plugins/graveyard/evals/pier/run.sh                                       # full roster, Docker
+PIER_AGENTS="oracle nop" plugins/graveyard/evals/pier/run.sh              # calibration floor, no keys
+PIER_AGENTS="claude-code oracle nop" plugins/graveyard/evals/pier/run.sh  # what CI runs
+PIER_ENV=modal plugins/graveyard/evals/pier/run.sh                        # Modal instead of Docker
+pier view                                                                 # trajectory viewer
 ```
 
-Each agent runs into its own job dir (`evals/pier/jobs/<agent>/`); pier writes the
+Each agent runs into its own job dir (`plugins/graveyard/evals/pier/jobs/<agent>/`); pier writes the
 aggregate `JobResult` to `<agent>/result.json` (with `exclude_trial_results=True`,
 so the top-level `trial_results` is empty). `run.sh` reads the reward out of that
 file's `stats.evals` to assert every agent reached its expected reward

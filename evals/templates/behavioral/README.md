@@ -6,7 +6,7 @@ behavior. This template is the starting point for that second tier: copy it, fil
 in three TODOs, and you have a working promptfoo suite that fails when the prose
 drifts.
 
-The graveyard plugin's own behavioral tier (`evals/promptfoo/`) is the worked
+The graveyard plugin's own behavioral tier (`plugins/graveyard/evals/promptfoo/`) is the worked
 reference — read it alongside this template.
 
 ## What you get

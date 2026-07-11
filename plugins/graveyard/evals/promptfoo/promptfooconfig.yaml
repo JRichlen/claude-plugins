@@ -38,7 +38,7 @@ defaultTest:
   vars:
     # The skill is the system-under-test: inject its real text so a drift in the
     # prose (e.g. dropping the "user runs the delete script" rule) fails here.
-    skill: file://../../plugins/graveyard/skills/graveyard/SKILL.md
+    skill: file://../../skills/graveyard/SKILL.md
   options:
     # Grader for llm-rubric assertions. Kept on a strong model, NOT the cheap
     # model under test: a weak grader would flip pass/fail unreliably and hollow
