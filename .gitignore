@@ -14,13 +14,13 @@ node_modules/
 .env
 .env.*
 # promptfoo writes its run cache and HTML output here.
-evals/promptfoo/output/
+plugins/graveyard/evals/promptfoo/output/
 .promptfoo/
 promptfoo-errors.log
 # pier stages a fresh copy of the live skill scripts into each task's build
-# context at run time (see evals/pier/run.sh) — it's generated, not source.
-evals/pier/tasks/*/environment/skill/
+# context at run time (see plugins/graveyard/evals/pier/run.sh) — it's generated, not source.
+plugins/graveyard/evals/pier/tasks/*/environment/skill/
 # pier run logs / local results. run.sh writes per-agent job dirs under jobs/.
-evals/pier/.pier/
-evals/pier/runs/
-evals/pier/jobs/
+plugins/graveyard/evals/pier/.pier/
+plugins/graveyard/evals/pier/runs/
+plugins/graveyard/evals/pier/jobs/
