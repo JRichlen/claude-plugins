@@ -182,10 +182,11 @@ jobs:
       - uses: dorny/paths-filter@v3
         id: touched
         with:
-          # Only this plugin's promptfoo surface makes its leg worth the spend.
+          # Only this plugin's promptfoo surface (or the shared paid harness) makes its leg worth the spend.
           filters: |
             paid:
               - 'plugins/${{ matrix.plugin }}/evals/promptfoo/**'
+              - 'evals/paid/**'
       - uses: actions/setup-node@v4
         if: steps.touched.outputs.paid == 'true'
         with:
