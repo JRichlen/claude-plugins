@@ -27,6 +27,14 @@ jobs:
         # so the always-on gate can't silently degrade into a rubber stamp.
         run: evals/counterfeits/run.sh
 
+  # PLACEHOLDER (wired in the next commit): the counterfeit corpus is promoted out
+  # of the cheap job into its own required aggregation gate named `counterfeit tier`
+  # (detect → run matrix → always()-report), mirroring the deep tier's structure so
+  # a path-filtered skip can never leave the gate hanging. The frozen check name is
+  # landed here first — with required-checks.json — so the branch-protection lock
+  # stays green across the two-commit split; the real jobs replace this marker next.
+  # frozen check name: counterfeit tier
+
   grader-model:
     # Confirms the Anthropic grader model configured in promptfooconfig.yaml is a
     # real, reachable model id — a 200 confirms the slug, a 404 says it's wrong.
@@ -134,7 +142,7 @@ jobs:
           filters: |
             safety:
               - 'plugins/graveyard/skills/graveyard/scripts/**'
-              - 'evals/pier/**'
+              - 'plugins/graveyard/evals/pier/**'
 
   deep-run:
     name: deep tier — pier run (safety paths)
