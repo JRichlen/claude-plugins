@@ -78,11 +78,11 @@ def _self_test():
         passed = passed and cond
 
     checks = ["cheap tier (deterministic, offline)", "deep tier (pier)"]
-    paths = ["evals/pier/**"]
+    paths = ["plugins/graveyard/evals/pier/**"]
 
     # In-sync workflow: every frozen string present → no drift.
     in_sync = "jobs:\n  a:\n    name: cheap tier (deterministic, offline)\n" \
-              "  b:\n    name: deep tier (pier)\n    paths: [evals/pier/**]\n"
+              "  b:\n    name: deep tier (pier)\n    paths: [plugins/graveyard/evals/pier/**]\n"
     check("in-sync workflow reports no drift", find_drift(checks, paths, in_sync) == [])
 
     # Renamed check → that string is flagged.
@@ -91,8 +91,8 @@ def _self_test():
     check("renamed check is caught", drift == ["deep tier (pier)"])
 
     # Dropped safety path → flagged.
-    dropped = in_sync.replace("evals/pier/**", "evals/other/**")
-    check("dropped safety path is caught", find_drift(checks, paths, dropped) == ["evals/pier/**"])
+    dropped = in_sync.replace("plugins/graveyard/evals/pier/**", "evals/other/**")
+    check("dropped safety path is caught", find_drift(checks, paths, dropped) == ["plugins/graveyard/evals/pier/**"])
 
     # Malformed spec raises rather than passing silently.
     try:
