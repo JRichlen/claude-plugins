@@ -76,7 +76,9 @@ print(json.dumps([l.rstrip("\n") for l in sys.stdin if l.strip()]))
 
 echo
 echo "Applying branch protection to '$branch'…"
-gh api --method PUT "${repo_flag[@]}" \
+# ${repo_flag[@]+...} guards the empty-array expansion: bash 3.2 under `set -u`
+# treats a bare "${repo_flag[@]}" as unbound when no --repo was passed.
+gh api --method PUT ${repo_flag[@]+"${repo_flag[@]}"} \
   "repos/{owner}/{repo}/branches/$branch/protection" \
   --input - <<JSON
 {

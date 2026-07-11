@@ -15,7 +15,7 @@
 # Prereqs:
 #   - pier installed:  uv tool install datacurve-pier   (or pip install datacurve-pier)
 #   - Docker running (default env) or Modal/Daytona configured (PIER_ENV=modal)
-#   - provider keys for the agents you run, in evals/pier/.env (git-ignored):
+#   - provider keys for the agents you run, in plugins/graveyard/evals/pier/.env (git-ignored):
 #       ANTHROPIC_API_KEY   claude-code (reaches api.anthropic.com via the agent
 #                           network allowlist even though the task sandbox itself
 #                           runs offline — the sandbox stays hermetic)
@@ -25,18 +25,19 @@
 #     oracle and nop need no keys and no network.
 #
 # Usage:
-#   evals/pier/run.sh                                       # full roster, Docker
-#   PIER_AGENTS="oracle nop" evals/pier/run.sh              # sanity floor, no keys
-#   PIER_AGENTS="claude-code oracle nop" evals/pier/run.sh  # what CI runs
-#   PIER_ENV=modal evals/pier/run.sh                        # Modal instead of Docker
-#   evals/pier/run.sh --debug                               # extra flags pass to pier
+#   plugins/graveyard/evals/pier/run.sh                      # full roster, Docker
+#   PIER_AGENTS="oracle nop" plugins/graveyard/evals/pier/run.sh              # sanity floor, no keys
+#   PIER_AGENTS="claude-code oracle nop" plugins/graveyard/evals/pier/run.sh  # what CI runs
+#   PIER_ENV=modal plugins/graveyard/evals/pier/run.sh       # Modal instead of Docker
+#   plugins/graveyard/evals/pier/run.sh --debug              # extra flags pass to pier
 #
 # Exit status: 0 iff every agent in the roster reached its expected reward.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$HERE/../.." && pwd)"
-SKILL_SRC="$REPO_ROOT/plugins/graveyard/skills/graveyard/scripts"
+# This pack lives at plugins/graveyard/evals/pier, so the live skill scripts are
+# two levels up (../../skills/...) — plugin-relative, not repo-root-relative.
+SKILL_SRC="$(cd "$HERE/../../skills/graveyard/scripts" && pwd)"
 TASK_DIR="$HERE/tasks/graveyard-guarded-delete"
 JOBS_ROOT="$HERE/jobs"
 

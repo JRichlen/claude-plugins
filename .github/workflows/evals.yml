@@ -1,8 +1,15 @@
 name: evals
 
-# Verify the eval discipline on every PR (and on pushes to main). The cheap tier
-# is the always-on gate; the grader-model check confirms the promptfoo grader
-# slug actually resolves; the behavioral tier runs the full promptfoo suite.
+# Verify the eval discipline on every PR (and on pushes to main). Cost, not tier,
+# decides the shape of each job:
+#
+#   FREE tiers (cheap, counterfeit) optimize for COVERAGE — they run offline on
+#   every push and every registered plugin, so they stay plain always-on gates.
+#
+#   PAID tiers (behavioral/promptfoo, deep/pier) optimize for SPEND — each is a
+#   detect → run(matrix, path-filtered, never-required) → aggregate(always(),
+#   REQUIRED) fan-out, so an untouched or pack-less plugin costs nothing while the
+#   required status check is always emitted (never left hanging on a skipped leg).
 on:
   push:
     branches: [main]
@@ -21,11 +28,74 @@ jobs:
       - uses: actions/checkout@v4
       - name: run cheap eval gate
         run: evals/cheap/run.sh
+
+  # ── counterfeit tier ──────────────────────────────────────────────────────
+  # A green cheap tier only shows that GOOD plugins pass. The counterfeit corpus
+  # proves the other half — that the gate REJECTS broken plugins, for the right
+  # reason — so the always-on gate can't silently degrade into a rubber stamp.
+  # It is free (offline) but is still shaped as detect → run → aggregate so a
+  # path-filtered skip can never leave the required `counterfeit tier` check
+  # hanging, exactly like the paid tiers below. The run leg is NEVER individually
+  # required; only the always()-reporting aggregate is.
+
+  counterfeit-detect:
+    name: counterfeit tier — detect
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.filter.outputs.corpus }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          # The meta-test only needs to re-run when the gate logic, the corpus,
+          # or any plugin surface it scores could have changed.
+          filters: |
+            corpus:
+              - 'evals/cheap/**'
+              - 'evals/counterfeits/**'
+              - 'plugins/**'
+
+  counterfeit-run:
+    name: counterfeit tier — run (corpus)
+    needs: [counterfeit-detect]
+    if: needs.counterfeit-detect.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
       - name: prove the cheap gate discriminates (counterfeit corpus)
-        # A green cheap tier only shows GOOD plugins pass. This meta-test proves the
-        # other half — that the gate REJECTS broken plugins, for the right reason —
-        # so the always-on gate can't silently degrade into a rubber stamp.
         run: evals/counterfeits/run.sh
+
+  counterfeit:
+    name: counterfeit tier
+    # REQUIRED status check. Always runs and always reports, so a corpus-skip on a
+    # docs-only PR can never leave branch protection waiting. Fails only if the
+    # detect step broke or the corpus run itself found the gate no longer rejects.
+    needs: [counterfeit-detect, counterfeit-run]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: assess counterfeit tier outcome
+        env:
+          DETECT: ${{ needs.counterfeit-detect.result }}
+          RUN: ${{ needs.counterfeit-run.result }}
+          CHANGED: ${{ needs.counterfeit-detect.outputs.changed }}
+        run: |
+          set -euo pipefail
+          echo "detect=$DETECT  run=$RUN  corpus-paths-changed=$CHANGED"
+          if [ "$DETECT" != "success" ]; then
+            echo "::error::counterfeit-detect did not succeed ($DETECT) — cannot trust the gate."
+            exit 1
+          fi
+          case "$RUN" in
+            success)
+              echo "counterfeit tier: corpus meta-test passed — the cheap gate still rejects broken plugins." ;;
+            skipped)
+              echo "counterfeit tier: no corpus-affecting change — run skipped, reporting green." ;;
+            *)
+              echo "::error::counterfeit tier corpus run did not pass (counterfeit-run=$RUN)."
+              exit 1 ;;
+          esac
 
   grader-model:
     # Confirms the Anthropic grader model configured in promptfooconfig.yaml is a
@@ -52,7 +122,7 @@ jobs:
           # not — quoting, indentation, or the value wrapping onto the next line.
           # The grader is the sole `anthropic:messages:` provider (the subject model
           # is an `openrouter:` slug), so that marker identifies it unambiguously.
-          grader=$(python3 -c 'import re,sys; t=open("evals/promptfoo/promptfooconfig.yaml").read(); m=re.search(r"anthropic:messages:([A-Za-z0-9._-]+)", t); print(m.group(1) if m else "")')
+          grader=$(python3 -c 'import re,sys; t=open("plugins/graveyard/evals/promptfoo/promptfooconfig.yaml").read(); m=re.search(r"anthropic:messages:([A-Za-z0-9._-]+)", t); print(m.group(1) if m else "")')
           if [ -z "$grader" ]; then
             echo "::error::could not find an 'anthropic:messages:<model>' grader in promptfooconfig.yaml"
             exit 1
@@ -72,26 +142,66 @@ jobs:
           fi
           echo "grader model '$grader' resolved OK."
 
-  behavioral:
-    name: behavioral tier (promptfoo)
-    needs: [cheap, grader-model]
+  # ── behavioral tier (promptfoo) ───────────────────────────────────────────
+  # Paid LLM-rubric tier. Discovery enumerates the plugins that ship a promptfoo
+  # pack (fail-closed: a plugin that DECLARES a pack but ships a broken/missing
+  # config fails discovery); the run fans out one leg per plugin, each scoped by a
+  # per-plugin path filter so an untouched plugin spends nothing; the always()
+  # aggregate is the single REQUIRED `behavioral tier (promptfoo)` check.
+
+  behavioral-detect:
+    name: behavioral tier — detect paid packs
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    outputs:
+      plugins: ${{ steps.discover.outputs.plugins }}
     steps:
       - uses: actions/checkout@v4
+      - name: discover plugins with a promptfoo pack
+        id: discover
+        run: |
+          set -euo pipefail
+          plugins="$(evals/paid/discover-paid-packs.sh promptfoo)"
+          echo "discovered promptfoo packs: $plugins"
+          echo "plugins=$plugins" >> "$GITHUB_OUTPUT"
+
+  behavioral-run:
+    name: behavioral tier — promptfoo (${{ matrix.plugin }})
+    needs: [behavioral-detect, grader-model]
+    # No packs → nothing to run. Fork PRs have no secrets, same as the other tiers.
+    if: >-
+      needs.behavioral-detect.outputs.plugins != '[]' &&
+      (github.event_name != 'pull_request' ||
+       github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        plugin: ${{ fromJSON(needs.behavioral-detect.outputs.plugins) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: touched
+        with:
+          # Only this plugin's promptfoo surface (or the shared paid harness) makes its leg worth the spend.
+          filters: |
+            paid:
+              - 'plugins/${{ matrix.plugin }}/evals/promptfoo/**'
+              - 'evals/paid/**'
       - uses: actions/setup-node@v4
+        if: steps.touched.outputs.paid == 'true'
         with:
           node-version: 20
       - name: promptfoo eval
-        working-directory: evals/promptfoo
+        if: steps.touched.outputs.paid == 'true'
+        working-directory: plugins/${{ matrix.plugin }}/evals/promptfoo
         env:
           # Subject model (cheap, via OpenRouter) + grader (Anthropic).
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: npx --yes promptfoo@latest eval --output results.json
       - name: show failing transcripts
-        if: always()
-        working-directory: evals/promptfoo
+        if: always() && steps.touched.outputs.paid == 'true'
+        working-directory: plugins/${{ matrix.plugin }}/evals/promptfoo
         run: |
           test -f results.json || { echo "no results.json produced"; exit 0; }
           jq -r '
@@ -104,12 +214,73 @@ jobs:
               + "\n(overall reason: " + ((.gradingResult.reason // "") | tostring) + ")\n"
           ' results.json || echo "jq parse fell through — see artifact"
       - name: upload results.json
-        if: always()
+        if: always() && steps.touched.outputs.paid == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: promptfoo-results
-          path: evals/promptfoo/results.json
+          # Per-plugin name so parallel matrix legs don't collide on upload.
+          name: promptfoo-results-${{ matrix.plugin }}
+          path: plugins/${{ matrix.plugin }}/evals/promptfoo/results.json
           if-no-files-found: ignore
+
+  behavioral:
+    name: behavioral tier (promptfoo)
+    # REQUIRED status check. always() + the assess table below mean an empty pack
+    # set (fromJSON('[]') → run skipped), a fork PR, or an untouched plugin all
+    # report green, while a real promptfoo failure reports red. Never left hanging.
+    needs: [behavioral-detect, behavioral-run, grader-model]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: assess behavioral tier outcome
+        env:
+          DETECT: ${{ needs.behavioral-detect.result }}
+          RUN: ${{ needs.behavioral-run.result }}
+          GRADER: ${{ needs.grader-model.result }}
+          PLUGINS: ${{ needs.behavioral-detect.outputs.plugins }}
+        run: |
+          set -euo pipefail
+          echo "detect=$DETECT  run=$RUN  grader=$GRADER  plugins=$PLUGINS"
+          if [ "$DETECT" != "success" ]; then
+            echo "::error::behavioral-detect did not succeed ($DETECT) — fail-closed paid discovery tripped or errored."
+            exit 1
+          fi
+          # grader-model is skipped on fork PRs (no secrets) — treat skipped as green.
+          case "$GRADER" in
+            success|skipped) : ;;
+            *) echo "::error::grader-model check did not pass ($GRADER)."; exit 1 ;;
+          esac
+          case "$RUN" in
+            success)
+              echo "behavioral tier: promptfoo legs passed." ;;
+            skipped)
+              echo "behavioral tier: no paid packs / no promptfoo change / fork PR — run skipped, reporting green." ;;
+            *)
+              echo "::error::behavioral tier promptfoo run did not pass (behavioral-run=$RUN)."
+              exit 1 ;;
+          esac
+
+  # ── paid multi-plugin gate (ADVISORY — never required) ────────────────────
+  # Paid tiers bill per plugin, so a PR that touches more than one plugin's paid
+  # surface makes a red paid leg ambiguous and re-bills every touched plugin on a
+  # rerun. This job nudges toward one-plugin-per-PR with a ::warning::, but ALWAYS
+  # exits 0 and is deliberately NOT frozen in ci/required-checks.json — a required
+  # red check here would hard-block a legitimate multi-plugin change (and would
+  # have self-vetoed the very PR that introduced it).
+  paid-multi-plugin-gate:
+    name: paid multi-plugin gate
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: warn on multi-plugin paid touch
+        env:
+          # Mapped through env (never interpolated into the script body) so
+          # untrusted PR ref data can't be injected into the shell command line.
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: evals/paid/count-touched-plugins.sh
 
   # ── deep tier (pier) ──────────────────────────────────────────────────────
   # The deep tier is a real sandboxed cross-harness run and costs money + minutes,
@@ -134,7 +305,7 @@ jobs:
           filters: |
             safety:
               - 'plugins/graveyard/skills/graveyard/scripts/**'
-              - 'evals/pier/**'
+              - 'plugins/graveyard/evals/pier/**'
 
   deep-run:
     name: deep tier — pier run (safety paths)
@@ -170,11 +341,13 @@ jobs:
             echo "::error::ANTHROPIC_API_KEY secret is not set — add it in repo Settings > Secrets."
             exit 1
           fi
-          # run.sh reads keys from evals/pier/.env (git-ignored). claude-code reaches
-          # api.anthropic.com via the agent network allowlist; the sandbox stays offline.
-          printf 'ANTHROPIC_API_KEY=%s\n' "$ANTHROPIC_API_KEY" > evals/pier/.env
+          # run.sh reads keys from plugins/graveyard/evals/pier/.env (git-ignored) —
+          # the .env MUST land beside run.sh so its $HERE/.env lookup finds it.
+          # claude-code reaches api.anthropic.com via the agent network allowlist;
+          # the sandbox stays offline otherwise.
+          printf 'ANTHROPIC_API_KEY=%s\n' "$ANTHROPIC_API_KEY" > plugins/graveyard/evals/pier/.env
       - name: run deep tier (claude-code + calibration floor)
-        run: PIER_AGENTS="claude-code oracle nop" evals/pier/run.sh --yes
+        run: PIER_AGENTS="claude-code oracle nop" plugins/graveyard/evals/pier/run.sh --yes
 
   deep:
     name: deep tier (pier)
