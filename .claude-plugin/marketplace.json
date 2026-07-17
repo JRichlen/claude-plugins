@@ -37,6 +37,17 @@
       },
       "license": "MIT",
       "keywords": ["plugin", "scaffold", "generator", "marketplace", "skill", "bootstrap"]
+    },
+    {
+      "name": "tailscale-wif",
+      "description": "Set up and troubleshoot secretless GitHub Actions -> Tailscale auth via Workload Identity Federation (WIF): GitHub OIDC exchanged for short-lived Tailscale tokens, with no stored API keys or OAuth secrets.",
+      "version": "1.0.0",
+      "source": "./plugins/tailscale-wif",
+      "author": {
+        "name": "Jordan Richlen"
+      },
+      "license": "MIT",
+      "keywords": ["tailscale", "github-actions", "oidc", "workload-identity-federation", "secretless", "ci-cd"]
     }
   ]
 }

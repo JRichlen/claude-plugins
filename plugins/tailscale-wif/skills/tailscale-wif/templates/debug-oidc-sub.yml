@@ -1,0 +1,33 @@
+# TEMPORARY debug job: decode the actual GitHub OIDC `sub` claim.
+#
+# Drop this job into the failing workflow (or run it on its own) to see the EXACT
+# subject GitHub is signing. That string is what your Tailscale Trust Credential's
+# Subject field must match. The usual surprise is OIDC subject hardening: the sub
+# is the ID-embedded form  repo:ORG@<orgId>/REPO@<repoId>:pull_request  rather
+# than the name-only  repo:ORG/REPO:pull_request .
+#
+# DELETE this job once you have confirmed the real subject — it prints token
+# metadata into the build log.
+name: Debug OIDC sub
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  decode-sub:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write      # REQUIRED to mint the OIDC token at all
+    steps:
+      - name: Decode {iss, aud, sub}
+        run: |
+          # Audience must match what the Trust Credential expects.
+          AUD="api.tailscale.com/${{ vars.TS_OIDC_CLIENT_ID }}"
+          TOK=$(curl -sH "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$AUD" | jq -r .value)
+          # The JWT payload is the 2nd dot-segment, base64url-encoded.
+          PAYLOAD=$(echo "$TOK" | cut -d. -f2)
+          # Pad to a multiple of 4 so base64 -d accepts it.
+          case $(( ${#PAYLOAD} % 4 )) in 2) PAYLOAD="$PAYLOAD==";; 3) PAYLOAD="$PAYLOAD=";; esac
+          # base64url -> base64, decode, pull the three fields that matter.
+          echo "$PAYLOAD" | tr '_-' '/+' | base64 -d | jq '{iss, aud, sub}'

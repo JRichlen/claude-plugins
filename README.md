@@ -19,6 +19,7 @@ installed by name.
 | Plugin | What it does |
 |--------|--------------|
 | [**graveyard**](plugins/graveyard/) 🪦 | Archive old GitHub repos into a single private repo as restorable git bundles, then safely delete the originals — never deleting one until its backup is verified. `/plugin install graveyard@jrichlen` |
+| [**tailscale-wif**](plugins/tailscale-wif/) 🔐 | Set up and troubleshoot secretless GitHub Actions → Tailscale auth via Workload Identity Federation: GitHub OIDC exchanged for short-lived Tailscale tokens, with no stored API key or OAuth secret. `/plugin install tailscale-wif@jrichlen` |
 
 Every plugin ships as a Claude Code plugin **and** works with any coding agent
 (Codex, Cursor, Gemini, Aider, …) via a standard `SKILL.md` + `AGENTS.md` entry
