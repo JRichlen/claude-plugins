@@ -31,6 +31,23 @@ run the paid tiers** (check out the branch and run `plugins/<name>/evals/promptf
 `evals/pier/run.sh` with keys) or push the branch to this repo so CI runs them, before
 merging. Green required checks on a fork are necessary, not sufficient.
 
+## Cross-harness coverage: what CI actually runs
+
+The deep (pier) tier's task docs advertise that a safety invariant "holds no matter
+which harness drives the skill" (`claude-code`, `codex`, `gemini-cli`, `cursor-cli`).
+That is the **design intent**, but **CI does not re-verify it** — `evals.yml` runs the
+deep tier with `PIER_AGENTS="claude-code oracle nop"` (the driven harness plus the
+oracle/nop calibration floor). The full cross-harness roster runs only on a **manual /
+release** invocation:
+
+```sh
+plugins/<name>/evals/pier/run.sh            # full roster, needs each provider's key
+```
+
+So the cross-harness guarantee is a trust-based practice, not something every PR proves.
+Run the full roster locally before a release, or when a change plausibly affects
+harness-specific behavior.
+
 ## Adding a plugin
 
 Use the plugin-factory scaffold (`/new-plugin`), fill the TODOs, replace the
