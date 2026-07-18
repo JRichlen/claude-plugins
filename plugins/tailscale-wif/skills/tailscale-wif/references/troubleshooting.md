@@ -14,7 +14,7 @@ wrong audience.
 1. Decode the actual `sub` (`templates/debug-oidc-sub.yml`).
 2. Set the Trust Credential Subject to the **ID-embedded** form
    `repo:ORG@<orgId>/REPO@<repoId>:*` — compute it with
-   `scripts/compute-subject.sh OWNER/REPO`.
+   `skills/tailscale-wif/scripts/compute-subject.sh OWNER/REPO`.
 3. Confirm the audience is `api.tailscale.com/<client-id>` and matches
    `vars.TS_OIDC_AUDIENCE`.
 

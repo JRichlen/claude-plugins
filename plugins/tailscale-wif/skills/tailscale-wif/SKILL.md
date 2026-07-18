@@ -76,7 +76,7 @@ Key change from the old secret-based setup: **remove `api-key`**, add
 
 A runner brings up `tailscaled` and joins your tailnet for the duration of the
 job. Requires **`tailscale/github-action` v4.1.3+** for federated identity, and
-**`tailscaled` >= 1.90.1** for WIF — pin `version: latest` so the installed
+**`tailscaled` >= 1.90.1** for WIF — set `version: latest` so the installed
 daemon is new enough. The Trust Credential's **scope is `auth_keys`**, and it
 must be allowed to **assign the tag(s)** the runner needs (e.g. `tag:ci`).
 
@@ -194,7 +194,7 @@ step once the real subject is confirmed.
 
 1. **Identify the use case** — ACL GitOps (`policy_file`) or node join
    (`auth_keys`). This decides the scope and the template.
-2. **Compute the subject.** Run `scripts/compute-subject.sh OWNER/REPO` (or the
+2. **Compute the subject.** Run `skills/tailscale-wif/scripts/compute-subject.sh OWNER/REPO` (or the
    `gh api` command above) to get the ID-embedded
    `repo:ORG@<orgId>/REPO@<repoId>:*`.
 3. **Create the Trust Credential** in the admin console with Issuer = GitHub

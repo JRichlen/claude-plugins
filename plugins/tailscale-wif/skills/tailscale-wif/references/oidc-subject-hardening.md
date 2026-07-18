@@ -52,9 +52,9 @@ gh api repos/OWNER/REPO --jq '{id, owner_id: .owner.id}'
 
 or let the helper assemble the whole subject for you:
 
-```sh
-scripts/compute-subject.sh OWNER/REPO
-```
+~~~sh
+skills/tailscale-wif/scripts/compute-subject.sh OWNER/REPO
+~~~
 
 Use the ID-embedded form **even if the name-only form currently works** — it is
 rename-proof (renaming the org or repo doesn't change the numeric IDs, so the

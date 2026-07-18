@@ -30,10 +30,10 @@ Use the **ID-embedded** form. It is required if your org hardened its OIDC confi
 (see `oidc-subject-hardening.md`), and it is the better choice regardless because
 numeric IDs survive org/repo renames. Compute it with:
 
-```sh
-scripts/compute-subject.sh OWNER/REPO
+~~~sh
+skills/tailscale-wif/scripts/compute-subject.sh OWNER/REPO
 # or:  gh api repos/OWNER/REPO --jq '{id, owner_id: .owner.id}'
-```
+~~~
 
 ### Custom claims
 Leave **empty** unless you are deliberately narrowing further (e.g. binding to a
