@@ -30,10 +30,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Pin the action to a SHA, not a moving tag. Replace the SHA below with the
-      # commit you have reviewed for tailscale/gitops-acl-action.
+      # Pin the action to a SHA, not a moving tag. This SHA is v1.5.2 (the first
+      # release exposing the federated-identity inputs); re-pin to a newer
+      # reviewed commit as the action is updated.
       - name: Apply tailnet policy
-        uses: tailscale/gitops-acl-action@<REVIEWED_SHA>
+        uses: tailscale/gitops-acl-action@5a4a17f5708e9bf96f4ee915a95e9f83c2eebe1a # v1.5.2
         with:
           # WIF: exactly one auth mode. No api-key. These two are PUBLIC.
           oauth-client-id: ${{ vars.TS_OIDC_CLIENT_ID }}

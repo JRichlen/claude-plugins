@@ -17,5 +17,6 @@
     "ci-cd"
   ],
   "skills": "./skills/",
-  "commands": "./commands/"
+  "commands": "./commands/",
+  "agents": "./agents/"
 }
