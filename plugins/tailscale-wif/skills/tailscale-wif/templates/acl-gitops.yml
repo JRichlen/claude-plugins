@@ -1,0 +1,44 @@
+# ACL / policy GitOps via Tailscale WIF (secretless).
+#
+# Use case 1: push your tailnet policy file from CI with tailscale/gitops-acl-action.
+# Trust Credential scope = policy_file.
+#
+# What makes this secretless:
+#   - permissions.id-token: write lets the runner mint a GitHub OIDC token.
+#   - oauth-client-id + audience are PUBLIC repo variables (vars.*), not secrets.
+#   - api-key is REMOVED — there is no stored Tailscale credential.
+#   - exactly ONE auth mode is passed (client-id + audience).
+#
+# Set vars.TS_OIDC_CLIENT_ID and vars.TS_OIDC_AUDIENCE to the values the Trust
+# Credential generated (audience is api.tailscale.com/<client-id>).
+name: Sync Tailscale ACL
+
+on:
+  push:
+    branches: [main]
+    paths: ["policy.hujson"]
+  pull_request:
+    branches: [main]
+    paths: ["policy.hujson"]
+
+jobs:
+  acl:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write      # REQUIRED: mint the GitHub OIDC token for the exchange
+      contents: read       # for actions/checkout
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pin the action to a SHA, not a moving tag. This SHA is v1.5.2 (the first
+      # release exposing the federated-identity inputs); re-pin to a newer
+      # reviewed commit as the action is updated.
+      - name: Apply tailnet policy
+        uses: tailscale/gitops-acl-action@5a4a17f5708e9bf96f4ee915a95e9f83c2eebe1a # v1.5.2
+        with:
+          # WIF: exactly one auth mode. No api-key. These two are PUBLIC.
+          oauth-client-id: ${{ vars.TS_OIDC_CLIENT_ID }}
+          audience: ${{ vars.TS_OIDC_AUDIENCE }}
+          # `test` on pull_request, `apply` on push to main
+          action: ${{ github.event_name == 'pull_request' && 'test' || 'apply' }}
+          policy-file: ./policy.hujson

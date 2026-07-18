@@ -1,0 +1,42 @@
+# Node join via Tailscale WIF (secretless).
+#
+# Use case 2: a CI runner joins the tailnet for the duration of the job with
+# tailscale/github-action. Trust Credential scope = auth_keys, and the credential
+# must be allowed to assign the tag(s) below.
+#
+# Requirements:
+#   - tailscale/github-action v4.1.3+ (federated identity support).
+#   - tailscaled >= 1.90.1 for WIF — set version: latest so it's new enough.
+#
+# What makes this secretless:
+#   - permissions.id-token: write lets the runner mint a GitHub OIDC token.
+#   - oauth-client-id + audience are PUBLIC repo variables (vars.*), not secrets.
+#   - oauth-secret is REMOVED — there is no stored Tailscale credential.
+#   - exactly ONE auth mode is passed (client-id + audience).
+name: Job on the tailnet
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  connect:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write      # REQUIRED: mint the GitHub OIDC token for the exchange
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Join the tailnet
+        uses: tailscale/github-action@v4.1.3
+        with:
+          # WIF: exactly one auth mode. No oauth-secret. These two are PUBLIC.
+          oauth-client-id: ${{ vars.TS_OIDC_CLIENT_ID }}
+          audience: ${{ vars.TS_OIDC_AUDIENCE }}
+          tags: tag:ci             # must be in the policy tagOwners AND assigned on the credential
+          version: latest          # guarantees tailscaled >= 1.90.1 (WIF support)
+
+      # ...now the runner is on the tailnet; talk to your tagged nodes here...
+      - name: Use the tailnet
+        run: tailscale status
