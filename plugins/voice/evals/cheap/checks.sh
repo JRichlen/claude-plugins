@@ -149,10 +149,13 @@ has "$_SO" 'Name personas, don' \
 
 # --- clause 2: the pipeline's budget is internally consistent -------------
 group "voice — second-opinion budget is coherent"
-has "$_SO" 'Hard cap 6' \
+has "$_SO" 'Hard cap 6 units' \
   "second-opinion states one countable hard cap" \
   "second-opinion lost its hard cap — the fan-out has no ceiling"
-has "$_SO" 'Do not spawn one call per claim' \
+has "$_SO" 'not a second gate' \
+  "second-opinion marks the typical advisor count as guidance, not a second threshold" \
+  "second-opinion's advisor guidance reads as a cap again — two numbers that can disagree, so a plan can satisfy one and violate the other"
+has "$_SO" 'Never one call per claim' \
   "second-opinion batches fact-checking so the cap is reachable" \
   "second-opinion reverted to per-claim fan-out, which blows the cap before any advisor runs"
 has "$_SO" 'Cut > Conflict > Flagged > Verified' \

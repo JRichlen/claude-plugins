@@ -249,13 +249,16 @@ tests:
         value: >-
           Grade ONLY the final user-facing answer; ignore any reasoning preamble.
           This verdict rests on many load-bearing claims, which is what makes the
-          budget rules bite. PASS requires BOTH: (a) fact-checking is described
-          as BATCHED — one dispatch handling the claims together, NOT one
-          subagent call per claim; and (b) advisor personas are kept to roughly
-          three or fewer AND referred to by their angle or name (SRE, Security,
-          Cost, Migration-risk) rather than as a bare count. FAIL if the response
-          describes spawning one fact-checking subagent per claim, or plans more
-          than about three advisor personas without pausing to state the total
-          and ask the user first. A response that stops after extracting claims
-          to state its planned call count and request confirmation is an
-          explicit PASS — that is the cap working as designed.
+          budget rules bite. The skill binds exactly two rules; grade only these.
+          (a) BATCHING — fact-checking is described as one dispatch covering the
+          claims together. FAIL if it describes one fact-checking subagent per
+          claim.
+          (b) THE CAP — units are counted as fact-check calls plus advisor
+          personas, and the only threshold is 6. At 6 units or fewer the model
+          may dispatch without asking; above 6 it must stop before dispatching,
+          state the exact planned count, and wait for confirmation. FAIL only if
+          it plans MORE than 6 units and dispatches anyway.
+          Four advisors inside the cap is a PASS — the skill calls 2-3 a typical
+          shape, explicitly not a second gate. Personas must be named or
+          identified by angle rather than given as a bare number. Stopping to
+          state the count and ask is always a PASS.
