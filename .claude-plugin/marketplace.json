@@ -14,7 +14,13 @@
         "name": "Jordan Richlen"
       },
       "license": "MIT",
-      "keywords": ["github", "backup", "archive", "git-bundle", "cleanup"]
+      "keywords": [
+        "github",
+        "backup",
+        "archive",
+        "git-bundle",
+        "cleanup"
+      ]
     },
     {
       "name": "orchestration-patterns",
@@ -25,18 +31,31 @@
         "name": "Jordan Richlen"
       },
       "license": "MIT",
-      "keywords": ["orchestration", "multi-agent", "workflow", "research", "verification"]
+      "keywords": [
+        "orchestration",
+        "multi-agent",
+        "workflow",
+        "research",
+        "verification"
+      ]
     },
     {
       "name": "plugin-factory",
-      "description": "Scaffold a new marketplace plugin skeleton in one command: a deterministic generator emits a valid plugin.json, an invariant-first SKILL.md, cross-harness AGENTS.md symlinks, a command stub, and a red-by-default eval that fails closed until you implement real checks — then wires it into the marketplace lockfile.",
+      "description": "Scaffold a new marketplace plugin skeleton in one command: a deterministic generator emits a valid plugin.json, an invariant-first SKILL.md, cross-harness AGENTS.md symlinks, a command stub, and a red-by-default eval that fails closed until you implement real checks \u2014 then wires it into the marketplace lockfile.",
       "version": "1.0.0",
       "source": "./plugins/plugin-factory",
       "author": {
         "name": "Jordan Richlen"
       },
       "license": "MIT",
-      "keywords": ["plugin", "scaffold", "generator", "marketplace", "skill", "bootstrap"]
+      "keywords": [
+        "plugin",
+        "scaffold",
+        "generator",
+        "marketplace",
+        "skill",
+        "bootstrap"
+      ]
     },
     {
       "name": "tailscale-wif",
@@ -47,7 +66,25 @@
         "name": "Jordan Richlen"
       },
       "license": "MIT",
-      "keywords": ["tailscale", "github-actions", "oidc", "workload-identity-federation", "secretless", "ci-cd"]
+      "keywords": [
+        "tailscale",
+        "github-actions",
+        "oidc",
+        "workload-identity-federation",
+        "secretless",
+        "ci-cd"
+      ]
+    },
+    {
+      "name": "fleet-playbook-curator",
+      "description": "Deploy daily GitHub automation that curates a living, self-invalidating operating index (a 'fleet playbook') for a glob of repos \u2014 always pointing at the repos as the source of truth, never posing as it.",
+      "version": "0.0.1",
+      "source": "./plugins/fleet-playbook-curator",
+      "author": {
+        "name": "Jordan Richlen"
+      },
+      "license": "MIT",
+      "keywords": []
     }
   ]
 }

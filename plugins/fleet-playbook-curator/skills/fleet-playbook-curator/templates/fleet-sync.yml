@@ -1,0 +1,109 @@
+name: Fleet sync
+
+# Deployed into the per-fleet playbook repo. ONE scheduled workflow, TWO jobs.
+# The load-bearing split: `detect` is deterministic (no LLM credential) and
+# auto-commits FACTS to main; `curate` runs the agent and opens a PR — it NEVER
+# pushes to main. Facts auto-commit; interpretation is PR-only.
+
+on:
+  schedule:
+    - cron: "17 6 * * *"      # daily
+  workflow_dispatch: {}
+
+concurrency:
+  group: fleet-sync
+  cancel-in-progress: false
+
+jobs:
+  # ---- deterministic, LLM-FREE. Writes trusted facts. -----------------------
+  detect:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write          # commit the facts manifest to main
+    outputs:
+      changed: ${{ steps.diff.outputs.changed }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read fleet definition
+        id: fleet
+        run: |
+          set -euo pipefail
+          owner="$(yq -r '.owner' fleet.yaml 2>/dev/null || jq -r '.owner' fleet.yaml)"
+          glob="$(yq -r '.glob' fleet.yaml 2>/dev/null || jq -r '.glob' fleet.yaml)"
+          echo "owner=$owner" >> "$GITHUB_OUTPUT"
+          echo "glob=$glob"   >> "$GITHUB_OUTPUT"
+      - name: Enumerate fleet + stamp head_sha (the staleness clock)
+        run: bash scripts/list-fleet-members.sh "${{ steps.fleet.outputs.owner }}" "${{ steps.fleet.outputs.glob }}" > new-manifest.json
+      - name: Diff vs the committed manifest
+        id: diff
+        run: |
+          set -euo pipefail
+          bash scripts/diff-fleet.sh fleet-manifest.json new-manifest.json > diff.json
+          changed="$(jq -r '.changed' diff.json)"
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+      - name: Commit facts (manifest) to main — trusted, reproducible
+        run: |
+          set -euo pipefail
+          mv new-manifest.json fleet-manifest.json
+          git config user.name  "fleet-sync[bot]"
+          git config user.email "fleet-sync@users.noreply.github.com"
+          if git diff --quiet -- fleet-manifest.json; then
+            echo "no fact change; recording a re-verified heartbeat in the changelog"
+            date -u +'- %Y-%m-%dT%H:%M:%SZ no change; fleet re-verified' >> fleet-playbook/CHANGELOG.md
+          fi
+          git add fleet-manifest.json fleet-playbook/CHANGELOG.md
+          git commit -m "detect: refresh fleet facts (changed=${{ steps.diff.outputs.changed }})" || echo "nothing to commit"
+          git push origin HEAD:main
+      - uses: actions/upload-artifact@v4
+        if: steps.diff.outputs.changed == 'true'
+        with: { name: fleet-diff, path: diff.json }
+
+  # ---- agentic. Reads only changed repos. Opens a PR. NEVER pushes to main. --
+  curate:
+    needs: detect
+    if: needs.detect.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write          # write to the PR branch only (not main)
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      # LLM credential is scoped to THIS job only — the detector never sees it.
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      # Swappable, cross-harness agent invocation. Default: Claude Code headless.
+      AGENT_CMD: ${{ vars.FLEET_AGENT_CMD || 'claude -p' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { name: fleet-diff }
+      - name: Gather context for ONLY the changed members
+        run: bash scripts/gather-context.sh diff.json > context.json
+      - name: Curate the playbook (edit, never regenerate)
+        run: |
+          set -euo pipefail
+          # The agent reads PROMPT.md + context.json and edits fleet-playbook/*.
+          # It must: cite every claim (repo@sha:path), append ONE changelog entry,
+          # and touch only sections whose sources changed. It writes NOTHING to main.
+          cat PROMPT.md context.json | $AGENT_CMD > /dev/null
+      - name: Guard — every citation must be traceable (fail before the PR, not in review)
+        run: |
+          set -euo pipefail
+          # Rejects the "cited-but-fabricated" failure mode: a claim naming a file
+          # that was never read this pass (worst case, a removed member). If this
+          # fails, the curation is discarded — it never reaches a PR.
+          bash scripts/validate-citations.sh fleet-playbook/index.json diff.json context.json
+      - name: Open a PR — never a direct push to main
+        run: |
+          set -euo pipefail
+          branch="curate/$(date -u +%Y%m%d-%H%M%S)"
+          git config user.name  "fleet-curator[bot]"
+          git config user.email "fleet-curator@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add fleet-playbook/
+          git commit -m "curate: refresh fleet-playbook from detected changes" || { echo "no curation delta"; exit 0; }
+          git push origin "$branch"
+          gh pr create --base main --head "$branch" \
+            --title "curate: fleet-playbook update" \
+            --body "Automated curation from a detected fleet change. The diff **is** the changelog — review that every new claim carries a repo@sha:path citation before merging."
