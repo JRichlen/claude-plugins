@@ -58,3 +58,16 @@ if grep -E 'git -C "?\$?\{?m\}?"? bundle verify' "$ARCH" >/dev/null 2>&1 \
 else
   bad "archive-repo.sh does not use the 'git -C' form for bundle verify"
 fi
+
+# --- deep-tier coverage is frozen -----------------------------------------
+# The deep (pier) tier now discovers pier packs per-plugin, so graveyard's
+# irreversible-delete guard stays deep-tested only as long as its pier pack
+# exists. Deleting it would silently drop the sandboxed cross-harness check
+# for the one skill that deletes repos. Make that a red build here.
+group "graveyard — deep-tier coverage frozen"
+PIER="$PLUGIN_DIR/evals/pier"
+if [ -x "$PIER/run.sh" ] && [ -d "$PIER/tasks/graveyard-guarded-delete" ]; then
+  ok "graveyard ships a pier pack (guarded-delete stays deep-tested)"
+else
+  bad "graveyard's pier pack is missing — the deep tier would stop verifying the guarded-delete invariant"
+fi
