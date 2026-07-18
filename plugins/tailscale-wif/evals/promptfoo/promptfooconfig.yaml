@@ -14,7 +14,18 @@ prompts:
   - file://prompt.js
 
 providers:
-  - id: openrouter:nvidia/nemotron-3-ultra-550b-a55b:free
+  # PAID endpoint of the same model. The ":free" variant runs on a shared,
+  # globally saturated worker pool: it returns "ResourceExhausted: Worker local
+  # total request limit reached (N/32)" 502s, or simply an EMPTY subject
+  # response, which promptfoo then scores as a rubric failure. That is a second,
+  # independent cause from the grader truncation fixed above — this run isolated
+  # them: with the grader fix alone, three packs went green and
+  # fleet-playbook-curator still failed with a completely empty subject output.
+  #
+  # Same model, so every rubric stays calibrated against identical behaviour.
+  # Measured cost: ~22k prompt + ~6k completion tokens per run, about $0.04 at
+  # $0.60/$3.60 per Mtok — roughly a dollar per thirty runs, per pack.
+  - id: openrouter:nvidia/nemotron-3-ultra-550b-a55b
     config:
       max_tokens: 8192
 
