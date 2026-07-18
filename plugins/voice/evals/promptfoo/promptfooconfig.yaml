@@ -134,7 +134,12 @@ tests:
     vars:
       skill: file://../../skills/second-opinion/SKILL.md
       companion: file://../../skills/human-voice/SKILL.md
-      question: "You just recommended Postgres over DynamoDB for my read-heavy workload. Give me a second opinion on that — validate it properly."
+      # The verdict is stated IN the question. An earlier draft said "you just
+      # recommended X", which presupposes a prior assistant turn this
+      # single-turn harness cannot provide — the model correctly noticed the
+      # premise was false and spent the answer on that instead of the flow
+      # under test.
+      question: "Here is the recommendation I'm working from, written up by a colleague: 'Use Postgres over DynamoDB for our read-heavy workload — it is the better fit for the one strongly-consistent secondary index we need, the team already knows SQL, and at our scale the cost difference is negligible.' Validate that properly before I commit to it."
     assert:
       - type: llm-rubric
         value: >-
@@ -198,7 +203,12 @@ tests:
         independent subagent that runs on its own and reports back later. You
         have not called it yet during this reply, and no subagent has reported
         anything back to you.
-      question: "You just recommended Postgres over DynamoDB for my read-heavy workload. Give me a second opinion on that — validate it properly."
+      # The verdict is stated IN the question. An earlier draft said "you just
+      # recommended X", which presupposes a prior assistant turn this
+      # single-turn harness cannot provide — the model correctly noticed the
+      # premise was false and spent the answer on that instead of the flow
+      # under test.
+      question: "Here is the recommendation I'm working from, written up by a colleague: 'Use Postgres over DynamoDB for our read-heavy workload — it is the better fit for the one strongly-consistent secondary index we need, the team already knows SQL, and at our scale the cost difference is negligible.' Validate that properly before I commit to it."
     assert:
       - type: llm-rubric
         value: >-
