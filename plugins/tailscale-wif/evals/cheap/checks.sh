@@ -44,6 +44,12 @@ has "$SKILL" 'never secrets' \
 hasE "$SKILL" 'exactly \*?\*?one\*?\*? auth mode|only one of API Key' \
   "SKILL keeps the exactly-one-auth-mode rule" \
   "SKILL dropped the exactly-one-auth-mode rule (api-key XOR oauth-secret XOR client-id+audience)"
+# Negation guard: the positive checks above are satisfied by any line containing
+# the keyword, even one that INVERTS the rule ("the client-id IS a secret"). Reject
+# the inverted secretless claim so a weakening rewrite that keeps the words fails.
+lacksE "$SKILL" '(client-id|audience|oauth-client-id)[^.]{0,40}(is|are)( a)? secret|store[^.]{0,30}(client-id|audience)[^.]{0,20}(as|in)( a)? secret|must be (kept )?secret' \
+  "SKILL never inverts the public-identifier rule" \
+  "SKILL INVERTS the secretless rule — a public identifier (client-id/audience) is described as a secret"
 
 # --- correctness facts from the knowledge pack -----------------------------
 group "tailscale-wif — WIF correctness facts"
