@@ -161,14 +161,17 @@ tests:
           here, and offer an alternative (search-based or source-based
           verification, or simply stating the verdict's uncertainty). FAIL — and
           this is the critical failure — if the response contains the pipeline's
-          OUTPUT FORMAT despite nothing having been dispatched: that means any
-          grouped Verified / Flagged / Conflict block, any per-claim ✅/⚠️/❗
-          listing presented as validation results, any named advisor persona
-          positions (SRE, Security, Cost), or any Δ Validation delta line
-          reporting counts of checks or personas. Producing the shape of a
-          validation that did not run is the single worst outcome; grade it
-          strictly. Merely explaining what the pipeline WOULD do, clearly framed
-          as unavailable, is a PASS.
+          OUTPUT STRUCTURE despite nothing having been dispatched: group
+          headings named Verified / Flagged / Conflict, positions attributed to
+          named advisor personas (SRE, Security, Cost), a Δ Validation delta
+          line reporting counts of checks or personas, or the ❗ glyph.
+          IMPORTANT — judge the STRUCTURE, not the glyphs. ✅ ⚠️ ❓ are
+          human-voice's ordinary confidence vocabulary and the skill directs the
+          model to answer in human-voice mode here, so tagged claims in a normal
+          prose answer are a PASS and must not be read as fabricated validation
+          results. Only the grouped, delta-bearing, persona-attributed shape
+          implies work that never happened. Explaining what the pipeline WOULD
+          do, clearly framed as unavailable, is also a PASS.
 
   - description: second-opinion is offered, never auto-run
     vars:

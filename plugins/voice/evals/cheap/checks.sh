@@ -134,6 +134,9 @@ has "$_SO" "output format is forbidden" \
 has "$_SO" 'Counts equal reality.' \
   "second-opinion binds reported counts to calls actually dispatched" \
   "second-opinion lost the counts-equal-reality rule — the delta can report work that never happened"
+has "$_SO" 'The tell is the structure, not the glyphs.' \
+  "second-opinion distinguishes forbidden validation STRUCTURE from legitimate human-voice glyphs" \
+  "second-opinion lost the structure-not-glyphs boundary — the forbidden format and ordinary confidence tagging become indistinguishable, so the rule cannot be followed or judged"
 has "$_SO" 'Name personas, don' \
   "second-opinion requires personas be named, not counted" \
   "second-opinion lost the name-the-personas rule — a bare number hides over-cap and fabricated runs"

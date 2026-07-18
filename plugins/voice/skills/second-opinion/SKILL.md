@@ -48,6 +48,15 @@ Both must hold before anything else happens.
    shape of a validation that did not run is the single worst failure this skill
    can have.
 
+   **The tell is the structure, not the glyphs.** `human-voice` uses `✅ ⚠️ ❓`
+   for ordinary claim confidence, so their presence is not what makes something
+   a counterfeit validation — and you do not have to strip your normal tagging
+   to comply here. What is forbidden is the *shape* that implies dispatched
+   work: group headings named Verified / Flagged / Conflict, a delta line
+   reporting counts of checks or personas, positions attributed to named
+   advisors, and `❗`. Tag as `human-voice` normally (verdict plus exceptions,
+   not every line) and emit none of that structure.
+
 Never run for quick facts or low-stakes picks. Cost consciousness is a design
 constraint, not a preference.
 
