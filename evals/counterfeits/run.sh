@@ -47,6 +47,15 @@ build_root() {
   cp -R "$REPO_ROOT/evals/cheap" "$root/evals/cheap"
   cp -R "$BASELINE/plugins" "$root/plugins"
   cp "$BASELINE/.claude-plugin/marketplace.json" "$root/.claude-plugin/marketplace.json"
+  # Stage the REPO-LEVEL gate inputs so the branch-protection lock (§11), the
+  # paid-pack discovery self-test (§11b) and the install-smoke coverage gate (§12)
+  # actually FIRE in the synthetic root instead of being silently inert for lack of
+  # their inputs. The real (in-sync/valid) copies keep the baseline green; fixtures
+  # 12-14 mutate them to prove each gate bites.
+  mkdir -p "$root/.github/workflows" "$root/ci"
+  cp "$REPO_ROOT/.github/workflows/evals.yml" "$root/.github/workflows/evals.yml"
+  cp -R "$REPO_ROOT/ci/." "$root/ci/"
+  cp -R "$REPO_ROOT/evals/paid" "$root/evals/paid"
   printf '%s' "$root"
 }
 
@@ -66,6 +75,16 @@ else
   printf '%s\n' "$cal_out" | sed 's/^/    /'
 fi
 rm -rf "$cal_root"
+
+# --- coverage: the repo-level gates must FIRE in the synthetic root ----------
+# §11/§11b/§12 are inert unless build_root stages their inputs. If it ever stops,
+# the gate's group header vanishes from the baseline run and its fixture(s) below
+# would silently pass by never triggering — this catches that coverage regression
+# (the "add a gate but leave it unexercised" drift the corpus exists to prevent).
+group "gate coverage — repo-level gates fire in the synthetic root"
+for g in "branch-protection lock" "paid-pack discovery self-test" "install-smoke coverage"; do
+  if grep -qF "$g" <<<"$cal_out"; then ok "gate fires in synthetic root: $g"; else bad "gate '$g' did NOT fire in the synthetic root — build_root staging regressed"; fi
+done
 
 # --- each counterfeit must be rejected by its expected gate -----------------
 group "counterfeits — each broken plugin is rejected for the right reason"
