@@ -5,7 +5,8 @@
     "confirm grader model resolves",
     "behavioral tier (promptfoo)",
     "deep tier (pier)",
-    "counterfeit tier"
+    "counterfeit tier",
+    "install tier (marketplace install-smoke + per-plugin evals)"
   ],
   "deep_safety_paths": [
     "plugins/graveyard/skills/graveyard/scripts/**",
