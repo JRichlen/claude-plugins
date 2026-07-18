@@ -85,6 +85,24 @@
       },
       "license": "MIT",
       "keywords": []
+    },
+    {
+      "name": "dev-diary",
+      "description": "Keep a scannable developer journal that writes itself: discover a day's work from local Claude Code sessions, git commits, and prompt history; interview the user about what mattered and why; and record a tight, dated entry. Ships /dev-diary (write today) and /dev-diary-review (revise a past day). The journal is a separate private repo; this plugin is just the tool.",
+      "version": "1.0.0",
+      "source": "./plugins/dev-diary",
+      "author": {
+        "name": "Jordan Richlen"
+      },
+      "license": "MIT",
+      "keywords": [
+        "diary",
+        "journal",
+        "changelog",
+        "standup",
+        "dev-log",
+        "retrospective"
+      ]
     }
   ]
 }

@@ -97,6 +97,84 @@ jobs:
               exit 1 ;;
           esac
 
+  # ── install tier (marketplace install-smoke + per-plugin evals) ───────────
+  # FREE, offline, no-secrets coverage tier — like cheap/counterfeit it optimizes
+  # for COVERAGE, not spend, so it runs on every push/PR with no path filter and
+  # no fork-PR guard. It proves each marketplace-listed plugin actually INSTALLS
+  # structurally (source → plugin.json → declared component paths all resolve and
+  # parse — a portable, cross-harness check that does NOT depend on an interactive
+  # Claude Code session), then runs THAT plugin's own cheap evals in isolation.
+  # Shaped as detect → run(matrix) → aggregate(always()) — identical to the paid
+  # tiers — so a per-plugin matrix leg can fan out while the single always()
+  # aggregate stays the REQUIRED status check (never a dynamic per-leg name).
+  # New plugins are auto-covered: the matrix is enumerated from marketplace.json.
+
+  install-detect:
+    name: install tier — detect plugins
+    runs-on: ubuntu-latest
+    outputs:
+      plugins: ${{ steps.enumerate.outputs.plugins }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: enumerate every marketplace-registered plugin
+        id: enumerate
+        run: |
+          set -euo pipefail
+          # Every plugin, unconditionally — unlike the paid tiers' pack-presence
+          # discovery, install+evals must cover ALL plugins every time.
+          plugins="$(python3 -c 'import json; print(json.dumps([p["name"] for p in json.load(open(".claude-plugin/marketplace.json")).get("plugins", [])]))')"
+          echo "enumerated plugins: $plugins"
+          echo "plugins=$plugins" >> "$GITHUB_OUTPUT"
+
+  install-run:
+    name: install tier — install-smoke + evals (${{ matrix.plugin }})
+    needs: [install-detect]
+    # No plugins → nothing to run (aggregate still reports green via always()).
+    # Free + offline + no secrets → runs on fork PRs too (no head-repo guard).
+    if: needs.install-detect.outputs.plugins != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        plugin: ${{ fromJSON(needs.install-detect.outputs.plugins) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: install smoke test (structural, headless, cross-harness)
+        run: ci/install-smoke.sh "${{ matrix.plugin }}"
+      - name: run this plugin's evals in isolation
+        run: evals/cheap/run-one.sh "${{ matrix.plugin }}"
+
+  install:
+    name: install tier (marketplace install-smoke + per-plugin evals)
+    # REQUIRED status check. always() + the assess table below mean an empty
+    # marketplace (fromJSON('[]') → run skipped) reports green, while any plugin's
+    # failed install-smoke or eval leg reports red. Never left hanging on a skip.
+    needs: [install-detect, install-run]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: assess install tier outcome
+        env:
+          DETECT: ${{ needs.install-detect.result }}
+          RUN: ${{ needs.install-run.result }}
+          PLUGINS: ${{ needs.install-detect.outputs.plugins }}
+        run: |
+          set -euo pipefail
+          echo "detect=$DETECT  run=$RUN  plugins=$PLUGINS"
+          if [ "$DETECT" != "success" ]; then
+            echo "::error::install-detect did not succeed ($DETECT) — cannot enumerate plugins."
+            exit 1
+          fi
+          case "$RUN" in
+            success)
+              echo "install tier: every plugin installs structurally and its evals pass." ;;
+            skipped)
+              echo "install tier: no plugins registered — run skipped, reporting green." ;;
+            *)
+              echo "::error::install tier had a failing plugin leg (install-run=$RUN)."
+              exit 1 ;;
+          esac
+
   grader-model:
     # Confirms the Anthropic grader model configured in promptfooconfig.yaml is a
     # real, reachable model id — a 200 confirms the slug, a 404 says it's wrong.
