@@ -9,7 +9,7 @@
     "install tier (marketplace install-smoke + per-plugin evals)"
   ],
   "deep_safety_paths": [
-    "plugins/graveyard/skills/graveyard/scripts/**",
-    "plugins/graveyard/evals/pier/**"
+    "plugins/*/skills/**/scripts/**",
+    "plugins/*/evals/pier/**"
   ]
 }

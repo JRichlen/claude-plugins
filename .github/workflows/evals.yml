@@ -384,42 +384,69 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       changed: ${{ steps.filter.outputs.safety }}
+      plugins: ${{ steps.discover.outputs.plugins }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
         id: filter
         with:
-          # Touching the guard logic or the harness that validates it is the only
-          # thing that can change deep-tier behavior — scope the run to exactly that.
+          # ANY plugin's guard scripts or pier harness — the whole marketplace's
+          # deep-tier safety surface (kept verbatim in sync with ci/required-checks.json
+          # deep_safety_paths, which the branch-protection lock freezes).
           filters: |
             safety:
-              - 'plugins/graveyard/skills/graveyard/scripts/**'
-              - 'plugins/graveyard/evals/pier/**'
+              - 'plugins/*/skills/**/scripts/**'
+              - 'plugins/*/evals/pier/**'
+      - name: discover plugins with a pier pack
+        id: discover
+        run: |
+          set -euo pipefail
+          plugins="$(evals/paid/discover-paid-packs.sh pier)"
+          echo "discovered pier packs: $plugins"
+          echo "plugins=$plugins" >> "$GITHUB_OUTPUT"
 
   deep-run:
-    name: deep tier — pier run (safety paths)
+    name: deep tier — pier run (${{ matrix.plugin }})
     needs: [deep-detect]
-    # Run only when the safety surface changed AND secrets are available (fork PRs
-    # don't get secrets, so they can't run pier — same policy as the other tiers).
+    # Run only when the safety surface changed AND there are pier packs AND secrets
+    # are available (fork PRs get no secrets — same policy as the other tiers). The
+    # job condition gates the protected-env pause so trivial PRs never reach approval.
     if: >-
       needs.deep-detect.outputs.changed == 'true' &&
+      needs.deep-detect.outputs.plugins != '[]' &&
       (github.event_name != 'pull_request' ||
        github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
-    # Protected environment: a maintainer must click Approve before this job runs,
-    # so nothing is spent until a human okays it. Trivial PRs never reach here.
+    # Protected environment: a maintainer must click Approve before these jobs run
+    # (one approval covers the whole matrix). Trivial PRs never reach here.
     environment: deep-evals
+    strategy:
+      fail-fast: false
+      matrix:
+        plugin: ${{ fromJSON(needs.deep-detect.outputs.plugins) }}
     steps:
       - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: touched
+        with:
+          # Only THIS plugin's safety surface makes its pier leg worth the spend;
+          # an untouched pier plugin's leg no-ops (all steps below are gated on it).
+          filters: |
+            mine:
+              - 'plugins/${{ matrix.plugin }}/skills/**/scripts/**'
+              - 'plugins/${{ matrix.plugin }}/evals/pier/**'
       - uses: actions/setup-python@v5
+        if: steps.touched.outputs.mine == 'true'
         with:
           python-version: "3.12"
       - name: install pier
+        if: steps.touched.outputs.mine == 'true'
         run: |
           set -euo pipefail
           pipx install datacurve-pier
           pier --version
       - name: stage provider keys
+        if: steps.touched.outputs.mine == 'true'
         env:
           # Mapped through env (never interpolated into the script body) so the
           # secret can't leak into logs via the shell command line.
@@ -430,13 +457,13 @@ jobs:
             echo "::error::ANTHROPIC_API_KEY secret is not set — add it in repo Settings > Secrets."
             exit 1
           fi
-          # run.sh reads keys from plugins/graveyard/evals/pier/.env (git-ignored) —
-          # the .env MUST land beside run.sh so its $HERE/.env lookup finds it.
-          # claude-code reaches api.anthropic.com via the agent network allowlist;
-          # the sandbox stays offline otherwise.
-          printf 'ANTHROPIC_API_KEY=%s\n' "$ANTHROPIC_API_KEY" > plugins/graveyard/evals/pier/.env
+          # run.sh reads keys from this plugin's evals/pier/.env (git-ignored) — it
+          # MUST land beside run.sh so its $HERE/.env lookup finds it. claude-code
+          # reaches api.anthropic.com via the agent network allowlist; sandbox offline.
+          printf 'ANTHROPIC_API_KEY=%s\n' "$ANTHROPIC_API_KEY" > "plugins/${{ matrix.plugin }}/evals/pier/.env"
       - name: run deep tier (claude-code + calibration floor)
-        run: PIER_AGENTS="claude-code oracle nop" plugins/graveyard/evals/pier/run.sh --yes
+        if: steps.touched.outputs.mine == 'true'
+        run: PIER_AGENTS="claude-code oracle nop" "plugins/${{ matrix.plugin }}/evals/pier/run.sh" --yes
 
   deep:
     name: deep tier (pier)
