@@ -42,16 +42,10 @@ providers:
     config:
       max_tokens: 8192
 
-# The subject model is a free-tier OpenRouter endpoint with a shared worker
-# pool. At 7 test cases, parallel dispatch pushed it past its request limit and
-# a case came back "ResourceExhausted: Worker local total request limit reached
-# (33/32)" — no output, empty grading result, red tier. That is a flake, not a
-# regression, and a behavioral tier that fails randomly teaches you to re-run CI
-# instead of reading it. Serialised with a delay: slower, but the red means
-# something.
 evaluateOptions:
-  maxConcurrency: 1
-  delay: 1000
+  # The paid endpoint does not need the 1-concurrency crawl the free one did;
+  # a modest cap keeps the tier quick without hammering it.
+  maxConcurrency: 3
 
 defaultTest:
   vars:
