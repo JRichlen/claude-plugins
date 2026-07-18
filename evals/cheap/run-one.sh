@@ -34,19 +34,35 @@ fi
 # in lockstep with how the rest of the harness discovers plugins.
 PLUGIN_SRC="$(python3 - "$REPO_ROOT" "$PLUGIN_NAME" <<'PY'
 import json, os, sys
+
 root, want = sys.argv[1], sys.argv[2]
-mkt = json.load(open(os.path.join(root, ".claude-plugin", "marketplace.json")))
+try:
+    mkt = json.load(open(os.path.join(root, ".claude-plugin", "marketplace.json")))
+except Exception as e:  # noqa: BLE001
+    print(f"::error::failed to read .claude-plugin/marketplace.json: {e}", file=sys.stderr)
+    sys.exit(1)
+
 for p in mkt.get("plugins", []):
     if p.get("name") == want:
-        src = p.get("source", "") or ""
-        src = src[2:] if src.startswith("./") else src
-        print(src.rstrip("/"))
-        break
+        src = (p.get("source", "") or "").rstrip("/")
+        if src.startswith("./"):
+            src = src[2:]
+        if not src:
+            print(f"::error::plugin '{want}' has empty 'source' in .claude-plugin/marketplace.json", file=sys.stderr)
+            sys.exit(1)
+        print(src)
+        sys.exit(0)
+
+print(f"::error::plugin '{want}' is not registered in .claude-plugin/marketplace.json", file=sys.stderr)
+sys.exit(1)
 PY
 )"
-
+status=$?
+if [ "$status" -ne 0 ]; then
+  exit "$status"
+fi
 if [ -z "$PLUGIN_SRC" ]; then
-  echo "::error::plugin '$PLUGIN_NAME' is not registered in .claude-plugin/marketplace.json" >&2
+  echo "::error::plugin '$PLUGIN_NAME' resolved to an empty source path" >&2
   exit 1
 fi
 

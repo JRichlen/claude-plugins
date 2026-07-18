@@ -108,19 +108,23 @@ for key in ("skills", "commands", "agents"):
     if key in pj:
         val = pj[key]
         if isinstance(val, str):
-            rel = val.lstrip("./").rstrip("/")
-            target = os.path.join(plugin_dir, rel)
-            if os.path.exists(target):
+            rel = val.removeprefix("./").rstrip("/")
+            target = os.path.normpath(os.path.join(plugin_dir, rel))
+            if not target.startswith(os.path.normpath(plugin_dir) + os.sep):
+                bad(f"'{key}': declared path './{rel}' escapes the plugin directory")
+            elif os.path.isdir(target):
                 ok(f"'{key}': './{rel}' exists")
             else:
-                bad(f"'{key}': declared path './{rel}' does not exist")
+                bad(f"'{key}': declared path './{rel}' does not exist (expected directory)")
         elif isinstance(val, list):
             if not val:
                 bad(f"'{key}': declared as an empty list")
             for item in val:
-                rel = str(item).lstrip("./")
-                target = os.path.join(plugin_dir, rel)
-                if os.path.isfile(target):
+                rel = str(item).removeprefix("./")
+                target = os.path.normpath(os.path.join(plugin_dir, rel))
+                if not target.startswith(os.path.normpath(plugin_dir) + os.sep):
+                    bad(f"'{key}': declared file './{rel}' escapes the plugin directory")
+                elif os.path.isfile(target):
                     ok(f"'{key}': file './{rel}' exists")
                 else:
                     bad(f"'{key}': declared file './{rel}' is not a real file")
