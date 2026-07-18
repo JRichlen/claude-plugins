@@ -21,7 +21,9 @@ evals/cheap/run.sh
 
 Checks: `bash -n` on every script; JSON validity of every manifest; each
 marketplace `source` resolves to a plugin whose `plugin.json` name matches;
-`SKILL.md` frontmatter has `name`+`description`; the delete-script generator
+`SKILL.md` frontmatter has `name`+`description`; every registered plugin passes
+its install smoke test (`ci/install-smoke.sh`), so no plugin can be registered
+without being covered by a passing smoketest; the delete-script generator
 guards bundled deletes and labels unbundled ones; and `archive-repo.sh` still
 uses the `git -C <mirror> bundle verify` form (the bare form silently breaks).
 Exit 0 = all pass. This is the gate that must be green before any commit.

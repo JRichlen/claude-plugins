@@ -228,6 +228,39 @@ if [ -f ".github/workflows/evals.yml" ]; then
   fi
 fi
 
+# --- 12. Install-smoke coverage (every registered plugin) -------------------
+# The install smoke test (ci/install-smoke.sh) proves ONE plugin installs
+# structurally. In CI it is fanned out over a matrix enumerated from
+# marketplace.json, so new plugins are auto-covered there — but that coverage
+# lives only in the workflow. Nothing in this always-on deterministic gate
+# asserts that every registered plugin is actually smoke-tested, so if a plugin
+# were ever dropped from the matrix (or the CI wiring drifted) its coverage could
+# silently dip with the required cheap tier still green. Close that gap here: run
+# the smoke test for EVERY plugin enumerated from the lockfile — the same source
+# of truth section 10 uses — and fail closed if any plugin is missing or does not
+# install. This is a REPO-level gate (it needs ci/install-smoke.sh) so, like the
+# branch-protection lock, it is active in the real repo yet inert in the synthetic
+# counterfeit root, which carries no ci/ directory.
+if [ -f "ci/install-smoke.sh" ]; then
+  group "install-smoke coverage (every registered plugin)"
+  while IFS= read -r sm_plugin; do
+    [ -z "$sm_plugin" ] && continue
+    if out="$(ci/install-smoke.sh "$sm_plugin" 2>&1)"; then
+      ok "install smoke: '$sm_plugin' installs structurally"
+    else
+      bad "install smoke: '$sm_plugin' is not covered by a passing smoke test"
+      printf '%s\n' "$out" | sed 's/^/    /'
+    fi
+  done < <(python3 - "$REPO_ROOT" <<'PY'
+import json, os, sys
+root = sys.argv[1]
+mkt = json.load(open(os.path.join(root, ".claude-plugin", "marketplace.json")))
+for p in mkt.get("plugins", []):
+    print(p.get("name", ""))
+PY
+)
+fi
+
 # --- summary ----------------------------------------------------------------
 printf '\n\033[1msummary:\033[0m %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
