@@ -1,0 +1,23 @@
+{
+  "name": "voice",
+  "version": "0.0.1",
+  "description": "Route every response element to exactly one voice: prose to human-voice (verdict-first, confidence-tagged), machine-read artifacts to machine-voice (compressed traces, logs, status lines); plus second-opinion, an offer-only subagent validation pipeline that never runs unbidden.",
+  "author": {
+    "name": "Jordan Richlen"
+  },
+  "repository": "https://github.com/JRichlen/claude-plugins",
+  "homepage": "https://github.com/JRichlen/claude-plugins/tree/main/plugins/voice",
+  "license": "MIT",
+  "keywords": [
+    "voice",
+    "style",
+    "prose",
+    "output-style",
+    "confidence",
+    "validation",
+    "second-opinion",
+    "communication"
+  ],
+  "skills": "./skills/",
+  "commands": "./commands/"
+}
