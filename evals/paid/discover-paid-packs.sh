@@ -136,12 +136,30 @@ self_test() {
     fi
   }
 
-  # 1. Real repo: graveyard ships both paid packs, the other plugins ship none.
-  local got
-  got="$(discover promptfoo "$REPO_ROOT")" || got="<error>"
-  check 'real repo promptfoo' '["graveyard"]' "$got"
-  got="$(discover pier "$REPO_ROOT")" || got="<error>"
-  check 'real repo pier' '["graveyard"]' "$got"
+  # 1. Real repo: discovery is SELF-CONSISTENT for both tiers — no hardcoded
+  #    plugin names (that set grows as plugins are added, and asserting it here is
+  #    exactly what drifted false before). Instead: discovery must exit 0, return a
+  #    valid JSON array, and every name it returns must be a registered plugin that
+  #    actually has that tier's pack dir (no phantoms, no crash).
+  local got tier
+  for tier in promptfoo pier; do
+    if ! got="$(discover "$tier" "$REPO_ROOT" 2>/dev/null)"; then
+      echo "FAIL: real repo $tier discovery errored"; failures=$((failures + 1)); continue
+    fi
+    if python3 - "$REPO_ROOT" "$tier" "$got" <<'PY'
+import json, os, sys
+root, tier, got = sys.argv[1], sys.argv[2], sys.argv[3]
+names = json.loads(got)
+assert isinstance(names, list), "not a JSON array"
+mkt = json.load(open(os.path.join(root, ".claude-plugin", "marketplace.json")))
+src = {p["name"]: (p.get("source", "") or "").lstrip("./").rstrip("/") for p in mkt["plugins"]}
+for n in names:
+    assert n in src, f"discovered '{n}' is not a registered plugin"
+    assert os.path.isdir(os.path.join(root, src[n], "evals", tier)), f"discovered '{n}' has no {tier} pack dir"
+PY
+    then echo "PASS: real repo $tier discovery is self-consistent ($got)"
+    else echo "FAIL: real repo $tier discovery returned a phantom/invalid result ($got)"; failures=$((failures + 1)); fi
+  done
 
   # 2. Synthetic root exercising every branch of the contract. Cleaned up at the
   # single return below — a RETURN trap would be global and re-fire (with tmp out
