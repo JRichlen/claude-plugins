@@ -1,0 +1,21 @@
+{
+  "name": "dev-diary",
+  "version": "1.0.0",
+  "description": "Keep a scannable developer journal that writes itself: discover a day's work from local Claude Code sessions, git commits, and prompt history; interview the user about what mattered and why; and record a tight, dated entry. Ships /dev-diary (write today) and /dev-diary-review (revise a past day). The journal is a separate private repo; this plugin is just the tool.",
+  "author": {
+    "name": "Jordan Richlen"
+  },
+  "repository": "https://github.com/JRichlen/claude-plugins",
+  "homepage": "https://github.com/JRichlen/claude-plugins/tree/main/plugins/dev-diary",
+  "license": "MIT",
+  "keywords": [
+    "diary",
+    "journal",
+    "changelog",
+    "standup",
+    "dev-log",
+    "retrospective"
+  ],
+  "skills": "./skills/",
+  "commands": "./commands/"
+}
