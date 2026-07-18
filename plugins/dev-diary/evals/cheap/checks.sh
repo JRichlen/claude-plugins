@@ -43,6 +43,13 @@ for f in "$WRITE" "$REVIEW" "$GUIDE"; do
   else
     bad "redaction rule GONE from $f — entries could leak pasted tokens/keys"
   fi
+  # Negation guard: the keyword grep above passes on an INVERTED rule ("entries no
+  # longer redact"). Reject phrasings that keep the word but drop the guarantee.
+  if grep -qiE "no longer redact|redaction is (now )?(optional|off|disabled|not required)|don'?t redact|stop redacting|redaction[^.]{0,20}not (needed|required)" "$f"; then
+    bad "redaction rule INVERTED in $f — a 'no longer redact / optional' phrasing keeps the word but removes the guarantee"
+  else
+    ok "redaction rule not inverted: $(basename "$(dirname "$f")")/$(basename "$f")"
+  fi
 done
 
 # --- editorial invariant: interview, don't just transcribe -----------------
