@@ -228,6 +228,23 @@ if [ -f ".github/workflows/evals.yml" ]; then
   fi
 fi
 
+# --- 11b. Paid-pack discovery self-test -------------------------------------
+# evals/paid/discover-paid-packs.sh is the single source of truth the workflow's
+# paid (behavioral/deep) matrices are built from via fromJSON. Its --self-test
+# proves the fail-closed contract (declared-but-broken => fail; absent => skip)
+# and that real-repo discovery stays self-consistent. It previously drifted false
+# (stale hardcoded expectations) UNNOTICED because nothing invoked it — wire it
+# here so a broken discovery script is a red cheap tier. REPO-level gate (needs
+# evals/paid/), inert in the synthetic counterfeit root that carries no evals/paid/.
+if [ -f "evals/paid/discover-paid-packs.sh" ]; then
+  group "paid-pack discovery self-test"
+  if bash evals/paid/discover-paid-packs.sh --self-test >/dev/null 2>&1; then
+    ok "discover-paid-packs.sh self-test"
+  else
+    bad "discover-paid-packs.sh self-test failed — the paid-pack discovery contract drifted"
+  fi
+fi
+
 # --- 12. Install-smoke coverage (every registered plugin) -------------------
 # The install smoke test (ci/install-smoke.sh) proves ONE plugin installs
 # structurally. In CI it is fanned out over a matrix enumerated from
