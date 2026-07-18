@@ -134,6 +134,12 @@ has "$_SO" "output format is forbidden" \
 has "$_SO" 'Counts equal reality.' \
   "second-opinion binds reported counts to calls actually dispatched" \
   "second-opinion lost the counts-equal-reality rule — the delta can report work that never happened"
+has "$_SO" 'Never cite a source you have not read.' \
+  "second-opinion forbids citing sources no subagent returned" \
+  "second-opinion lost the no-invented-sources rule — the dispatched-but-not-returned state is where fabrication happens, and a fake citation is what makes a counterfeit believable"
+has "$_SO" 'A plan is not a result.' \
+  "second-opinion distinguishes a dispatch plan from findings" \
+  "second-opinion lost the plan-is-not-a-result rule — nothing stops it reporting outcomes before any subagent has reported back"
 has "$_SO" 'The tell is the structure, not the glyphs.' \
   "second-opinion distinguishes forbidden validation STRUCTURE from legitimate human-voice glyphs" \
   "second-opinion lost the structure-not-glyphs boundary — the forbidden format and ordinary confidence tagging become indistinguishable, so the rule cannot be followed or judged"

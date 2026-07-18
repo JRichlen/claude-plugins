@@ -60,6 +60,25 @@ Both must hold before anything else happens.
 Never run for quick facts or low-stakes picks. Cost consciousness is a design
 constraint, not a preference.
 
+## Report only what has come back
+
+There are three states, not two, and the middle one is where fabrication
+happens: no tool available (Step 0), **dispatched but nothing returned yet**,
+and results in hand.
+
+Until a subagent has actually reported back to you, you have no findings. In
+that middle state:
+
+- Say what you are dispatching and what you will check. That is honest.
+- **Never state an outcome for a claim.** No `✅`/`⚠️`/`❓` presented as a
+  fact-check result, no verdict held/downgraded/flipped, no delta.
+- **Never cite a source you have not read.** Writing "verified — AWS docs,
+  Postgres docs" when no subagent has returned is inventing evidence, and it is
+  worse than saying nothing: the citation is what makes the reader trust it.
+
+A plan is not a result. If your reply would read the same whether or not the
+subagents ran, you have written a counterfeit.
+
 ## Step 1 — Extract claims
 
 Decompose the verdict into load-bearing claims. A claim is load-bearing if the
