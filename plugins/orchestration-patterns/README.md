@@ -9,6 +9,10 @@ They were distilled from a real run (choosing an observability stack for a small
 ARM64 Kubernetes cluster) into domain-agnostic templates you drive with an `args`
 object.
 
+> **Portability:** the templates run on Claude Code's Workflow tool, but the
+> research-and-verify *discipline* is harness-agnostic — on any other harness,
+> re-implement it with that harness's fan-out primitive (see `AGENTS.md`).
+
 ## Install
 
 ```

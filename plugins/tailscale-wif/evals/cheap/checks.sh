@@ -15,12 +15,8 @@ T_ACL="$PLUGIN_DIR/skills/tailscale-wif/templates/acl-gitops.yml"
 T_JOIN="$PLUGIN_DIR/skills/tailscale-wif/templates/node-join.yml"
 T_DBG="$PLUGIN_DIR/skills/tailscale-wif/templates/debug-oidc-sub.yml"
 
-# has FILE PATTERN OK-MSG FAIL-MSG  — fixed-string grep
-has()  { if grep -qF "$2" "$1" 2>/dev/null; then ok "$3"; else bad "$4"; fi; }
-# hasE FILE REGEX OK-MSG FAIL-MSG   — extended-regex grep
-hasE() { if grep -qE "$2" "$1" 2>/dev/null; then ok "$3"; else bad "$4"; fi; }
-# lacksE FILE REGEX OK-MSG FAIL-MSG — must NOT match (negative / secretless check)
-lacksE(){ if grep -qE "$2" "$1" 2>/dev/null; then bad "$4"; else ok "$3"; fi; }
+# has/hasE/lacksE (fixed-string / regex / negative grep helpers) are provided by
+# evals/cheap/run.sh as a single shared definition, inherited by every pack.
 
 # --- structure: the advertised surface exists ------------------------------
 group "tailscale-wif — structure"

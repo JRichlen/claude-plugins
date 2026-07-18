@@ -11,10 +11,7 @@ SK="$PLUGIN_DIR/skills/fleet-playbook-curator"
 PB="$SK/templates/fleet-playbook"
 SYNC="$SK/templates/fleet-sync.yml"
 FX="$PLUGIN_DIR/evals/cheap/fixtures"
-
-has()   { if grep -qF "$2" "$1" 2>/dev/null; then ok "$3"; else bad "$4"; fi; }
-hasE()  { if grep -qE "$2" "$1" 2>/dev/null; then ok "$3"; else bad "$4"; fi; }
-lacksE(){ if grep -qE "$2" "$1" 2>/dev/null; then bad "$4"; else ok "$3"; fi; }
+# has/hasE/lacksE are provided by evals/cheap/run.sh (shared, single definition).
 
 # --- structure: the advertised surface exists ------------------------------
 group "fleet-playbook-curator — structure"
