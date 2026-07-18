@@ -23,29 +23,30 @@ dir="${1:?usage: portability-lint.sh <plugin-dir>}"
 CC_ONLY='\bhooks?\b|\bsub-?agents?\b|Workflow tool|PreToolUse|PostToolUse|parallel\(|pipeline\('
 
 # A caveat that acknowledges the primitive is CC-specific but the pattern ports.
-CAVEAT='harness-agnostic|harness-portable|PORTABILITY:|ports? to (any|other|another) harness|re-implement it with'
+# Matched case-insensitively (below) so "On any other harness…" counts.
+CAVEAT='harness-agnostic|harness-portable|PORTABILITY:|ports? to (any|other|another) harness|on (any|other|another) harness|re-implement it with|not a (hard )?dependency|convenience, not a dependency'
 
 # Only prose steers a reader across harnesses; skip code/templates/json.
 prose=()
 while IFS= read -r f; do prose+=("$f"); done < <(find "$dir" -type f -name '*.md' | sort)
 [ "${#prose[@]}" -eq 0 ] && exit 0
 
-hits=()
+# CO-LOCATED: each prose file that leans on a CC-only primitive must carry the
+# caveat IN THAT FILE. A caveat buried in an unrelated doc doesn't help a reader
+# of the file that actually uses the primitive, and lets every other file in the
+# plugin reference CC-only machinery uncaveated once one file mentions it.
+violations=()
 for f in "${prose[@]}"; do
-  if grep -nEq "$CC_ONLY" "$f"; then hits+=("$f"); fi
+  grep -Eq "$CC_ONLY" "$f" || continue     # this file doesn't use a CC-only primitive
+  grep -Eiq "$CAVEAT" "$f" && continue       # ...and if it does, it carries its own caveat
+  violations+=("$f")
 done
 
-# No CC-only prose anywhere → nothing to caveat, clean.
-[ "${#hits[@]}" -eq 0 ] && exit 0
+[ "${#violations[@]}" -eq 0 ] && exit 0
 
-# CC-only prose exists → the plugin must carry a caveat somewhere in its prose.
-if grep -rEq "$CAVEAT" "${prose[@]}"; then
-  exit 0
-fi
-
-echo "portability-lint: $dir references Claude-Code-only primitives without a portability caveat" >&2
-for f in "${hits[@]}"; do
-  echo "  - $f uses: $(grep -oE "$CC_ONLY" "$f" | sort -u | paste -sd' ' -)" >&2
+echo "portability-lint: $dir has file(s) referencing Claude-Code-only primitives without a portability caveat co-located in the file" >&2
+for f in "${violations[@]}"; do
+  echo "  - $f uses: $(grep -oE "$CC_ONLY" "$f" | sort -u | paste -sd' ' -) (no caveat in this file)" >&2
 done
-echo "  Add a caveat (e.g. 'the discipline is harness-agnostic; re-implement it with your harness's fan-out primitive')." >&2
+echo "  Add a caveat in EACH such file (e.g. 'the discipline is harness-agnostic; re-implement it with your harness's fan-out primitive')." >&2
 exit 1

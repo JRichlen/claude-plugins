@@ -28,6 +28,12 @@ pass=0; fail=0
 ok()   { printf '  \033[32mPASS\033[0m %s\n' "$1"; pass=$((pass+1)); }
 bad()  { printf '  \033[31mFAIL\033[0m %s\n' "$1"; fail=$((fail+1)); }
 group(){ printf '\n\033[1m%s\033[0m\n' "$1"; }
+# Shared marker helpers for per-plugin packs — a SINGLE definition here, inherited
+# by every sourced checks.sh, so the byte-identical per-plugin copies can't drift
+# apart. has FILE FIXED OK FAIL | hasE FILE REGEX OK FAIL | lacksE FILE REGEX OK FAIL.
+has()   { if grep -qF "$2" "$1" 2>/dev/null; then ok "$3"; else bad "$4"; fi; }
+hasE()  { if grep -qE "$2" "$1" 2>/dev/null; then ok "$3"; else bad "$4"; fi; }
+lacksE(){ if grep -qE "$2" "$1" 2>/dev/null; then bad "$4"; else ok "$3"; fi; }
 
 # --- 1. Shell scripts parse -------------------------------------------------
 group "shell syntax (bash -n)"
