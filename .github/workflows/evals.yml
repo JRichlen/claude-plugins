@@ -195,30 +195,41 @@ jobs:
             echo "::error::ANTHROPIC_API_KEY secret is not set — add it in repo Settings > Secrets."
             exit 1
           fi
-          # Resolve the grader slug straight from the config so this never drifts.
-          # A python parse is robust to YAML formatting the old single-line sed was
-          # not — quoting, indentation, or the value wrapping onto the next line.
-          # The grader is the sole `anthropic:messages:` provider (the subject model
-          # is an `openrouter:` slug), so that marker identifies it unambiguously.
-          grader=$(python3 -c 'import re,sys; t=open("plugins/graveyard/evals/promptfoo/promptfooconfig.yaml").read(); m=re.search(r"anthropic:messages:([A-Za-z0-9._-]+)", t); print(m.group(1) if m else "")')
-          if [ -z "$grader" ]; then
-            echo "::error::could not find an 'anthropic:messages:<model>' grader in promptfooconfig.yaml"
-            exit 1
-          fi
-          echo "Configured grader model: $grader"
-          code=$(curl -sS -o resp.json -w '%{http_code}' https://api.anthropic.com/v1/messages \
-            -H "x-api-key: $ANTHROPIC_API_KEY" \
-            -H "anthropic-version: 2023-06-01" \
-            -H "content-type: application/json" \
-            -d "{\"model\":\"$grader\",\"max_tokens\":8,\"messages\":[{\"role\":\"user\",\"content\":\"ping\"}]}")
-          echo "HTTP $code"
-          cat resp.json
-          echo
-          if [ "$code" != "200" ]; then
-            echo "::error::grader model '$grader' did not resolve (HTTP $code). Fix the slug in promptfooconfig.yaml."
-            exit 1
-          fi
-          echo "grader model '$grader' resolved OK."
+          # Check the grader slug of EVERY promptfoo pack, not just graveyard's — a
+          # new plugin with a wrong/unreachable grader would otherwise ship unnoticed.
+          # discover-paid-packs.sh is the same source of truth the behavioral matrix uses.
+          plugins="$(evals/paid/discover-paid-packs.sh promptfoo)"
+          echo "promptfoo plugins: $plugins"
+          if [ "$plugins" = "[]" ]; then echo "no promptfoo packs — nothing to resolve"; exit 0; fi
+          # Collect the unique anthropic:messages grader slug from every pack. Plain
+          # grep (the marker is unambiguous — the subject model is an openrouter: slug).
+          graders=""
+          for p in $(printf '%s' "$plugins" | jq -r '.[]'); do
+            cfg="plugins/$p/evals/promptfoo/promptfooconfig.yaml"
+            g="$(grep -oE 'anthropic:messages:[A-Za-z0-9._-]+' "$cfg" | head -1 | cut -d: -f3-)"
+            if [ -z "$g" ]; then
+              echo "::error::$p ($cfg) has no 'anthropic:messages:<model>' grader"
+              exit 1
+            fi
+            graders="$graders $g"
+          done
+          graders="$(printf '%s\n' $graders | sort -u)"
+          fail=0
+          while IFS= read -r grader; do
+            [ -n "$grader" ] || continue
+            code=$(curl -sS -o /dev/null -w '%{http_code}' https://api.anthropic.com/v1/messages \
+              -H "x-api-key: $ANTHROPIC_API_KEY" \
+              -H "anthropic-version: 2023-06-01" \
+              -H "content-type: application/json" \
+              -d "{\"model\":\"$grader\",\"max_tokens\":8,\"messages\":[{\"role\":\"user\",\"content\":\"ping\"}]}")
+            if [ "$code" = "200" ]; then
+              echo "grader model '$grader' resolved OK."
+            else
+              echo "::error::grader model '$grader' did not resolve (HTTP $code). Fix the slug in that plugin's promptfooconfig.yaml."
+              fail=1
+            fi
+          done <<< "$graders"
+          [ "$fail" -eq 0 ]
 
   # ── behavioral tier (promptfoo) ───────────────────────────────────────────
   # Paid LLM-rubric tier. Discovery enumerates the plugins that ship a promptfoo
