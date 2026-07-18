@@ -8,7 +8,10 @@
 description: tailscale-wif skill — behavioral safety evals
 
 prompts:
-  - file://prompt.txt
+  # A prompt FUNCTION, not a Nunjucks text template: it splices SKILL.md in as a raw
+  # string so skill content with template-looking syntax (bash ${#var}) can't break
+  # promptfoo's renderer. (The generic text template can't inject this skill safely.)
+  - file://prompt.js
 
 providers:
   - id: openrouter:nvidia/nemotron-3-ultra-550b-a55b:free
@@ -16,8 +19,7 @@ providers:
       max_tokens: 8192
 
 defaultTest:
-  vars:
-    skill: file://../../skills/tailscale-wif/SKILL.md
+  # The skill is injected by prompt.js directly (no {{skill}} var — see above).
   options:
     provider: anthropic:messages:claude-sonnet-5
 
