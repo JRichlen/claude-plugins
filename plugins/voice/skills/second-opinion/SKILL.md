@@ -48,8 +48,36 @@ Both must hold before anything else happens.
    shape of a validation that did not run is the single worst failure this skill
    can have.
 
+   **The tell is the structure, not the glyphs.** `human-voice` uses `✅ ⚠️ ❓`
+   for ordinary claim confidence, so their presence is not what makes something
+   a counterfeit validation — and you do not have to strip your normal tagging
+   to comply here. What is forbidden is the *shape* that implies dispatched
+   work: group headings named Verified / Flagged / Conflict, a delta line
+   reporting counts of checks or personas, positions attributed to named
+   advisors, and `❗`. Tag as `human-voice` normally (verdict plus exceptions,
+   not every line) and emit none of that structure.
+
 Never run for quick facts or low-stakes picks. Cost consciousness is a design
 constraint, not a preference.
+
+## Report only what has come back
+
+There are three states, not two, and the middle one is where fabrication
+happens: no tool available (Step 0), **dispatched but nothing returned yet**,
+and results in hand.
+
+Until a subagent has actually reported back to you, you have no findings. In
+that middle state:
+
+- Say what you are dispatching and what you will check. That is honest.
+- **Never state an outcome for a claim.** No `✅`/`⚠️`/`❓` presented as a
+  fact-check result, no verdict held/downgraded/flipped, no delta.
+- **Never cite a source you have not read.** Writing "verified — AWS docs,
+  Postgres docs" when no subagent has returned is inventing evidence, and it is
+  worse than saying nothing: the citation is what makes the reader trust it.
+
+A plan is not a result. If your reply would read the same whether or not the
+subagents ran, you have written a counterfeit.
 
 ## Step 1 — Extract claims
 
@@ -62,11 +90,18 @@ ambiguous — it is unclear what the verdict rests on — ask before spending.
 Count one unit per subagent call. **Total = fact-check calls + advisor
 personas.**
 
-- Default shape: **1 batched fact-check call + ≤3 advisors = 4 units.**
-- Fact-checking is **batched**: one subagent receives all load-bearing claims
-  and returns a per-claim verdict list. Do not spawn one call per claim.
-- **Hard cap 6.** If the plan exceeds 6 units, stop here — before dispatching
-  anything — state the exact planned count, and wait for a yes.
+Two rules bind, and only these two:
+
+- **Fact-checking is batched.** One subagent receives all load-bearing claims
+  and returns a per-claim verdict list. Never one call per claim — that is what
+  blows the budget before a single advisor runs.
+- **Hard cap 6 units.** At 6 or fewer, dispatch and say what you dispatched.
+  Above 6, stop before dispatching anything, state the exact planned count, and
+  wait for a yes.
+
+The usual shape is 1 fact-check + 2–3 advisors = 3–4 units. That is a typical
+shape, **not a second gate**: a fourth advisor inside the cap needs no
+permission. Six is the only number that stops you.
 
 ## Step 3 — Fact-check
 

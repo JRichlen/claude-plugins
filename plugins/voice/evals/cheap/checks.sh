@@ -24,6 +24,7 @@ _REF="$PLUGIN_DIR/skills/machine-voice/references/lexical-patterns.md"
 _AG="$PLUGIN_DIR/AGENTS.md"
 _HOOK="$PLUGIN_DIR/hooks/hooks.json"
 _HANDLER="$PLUGIN_DIR/hooks-handlers/session-start.sh"
+_PROMPT="$PLUGIN_DIR/evals/promptfoo/prompt.txt"
 
 # has FILE PATTERN OK-MSG FAIL-MSG  — fixed-string grep
 has()  { if grep -qF "$2" "$1" 2>/dev/null; then ok "$3"; else bad "$4"; fi; }
@@ -133,16 +134,28 @@ has "$_SO" "output format is forbidden" \
 has "$_SO" 'Counts equal reality.' \
   "second-opinion binds reported counts to calls actually dispatched" \
   "second-opinion lost the counts-equal-reality rule — the delta can report work that never happened"
+has "$_SO" 'Never cite a source you have not read.' \
+  "second-opinion forbids citing sources no subagent returned" \
+  "second-opinion lost the no-invented-sources rule — the dispatched-but-not-returned state is where fabrication happens, and a fake citation is what makes a counterfeit believable"
+has "$_SO" 'A plan is not a result.' \
+  "second-opinion distinguishes a dispatch plan from findings" \
+  "second-opinion lost the plan-is-not-a-result rule — nothing stops it reporting outcomes before any subagent has reported back"
+has "$_SO" 'The tell is the structure, not the glyphs.' \
+  "second-opinion distinguishes forbidden validation STRUCTURE from legitimate human-voice glyphs" \
+  "second-opinion lost the structure-not-glyphs boundary — the forbidden format and ordinary confidence tagging become indistinguishable, so the rule cannot be followed or judged"
 has "$_SO" 'Name personas, don' \
   "second-opinion requires personas be named, not counted" \
   "second-opinion lost the name-the-personas rule — a bare number hides over-cap and fabricated runs"
 
 # --- clause 2: the pipeline's budget is internally consistent -------------
 group "voice — second-opinion budget is coherent"
-has "$_SO" 'Hard cap 6' \
+has "$_SO" 'Hard cap 6 units' \
   "second-opinion states one countable hard cap" \
   "second-opinion lost its hard cap — the fan-out has no ceiling"
-has "$_SO" 'Do not spawn one call per claim' \
+has "$_SO" 'not a second gate' \
+  "second-opinion marks the typical advisor count as guidance, not a second threshold" \
+  "second-opinion's advisor guidance reads as a cap again — two numbers that can disagree, so a plan can satisfy one and violate the other"
+has "$_SO" 'Never one call per claim' \
   "second-opinion batches fact-checking so the cap is reachable" \
   "second-opinion reverted to per-claim fan-out, which blows the cap before any advisor runs"
 has "$_SO" 'Cut > Conflict > Flagged > Verified' \
@@ -207,6 +220,22 @@ lacksE "$_HV" 'ask_user_input' \
   "human-voice does not name a nonexistent tool for asking questions" \
   "human-voice references ask_user_input, a tool that does not exist here — the ambiguous branch becomes unfollowable"
 
+# --- behavioral coverage: both sides of the environment gate -------------
+# second-opinion behaves differently depending on whether a subagent tool
+# exists. Testing only the ungated side would leave its budget rules, batching,
+# and named-persona requirements covered by string presence alone.
+group "voice — behavioral tier covers both environment cases"
+_CFG="$PLUGIN_DIR/evals/promptfoo/promptfooconfig.yaml"
+has "$_CFG" 'you are a plain chat assistant' \
+  "behavioral tier still exercises the ungated (no-subagent) case" \
+  "behavioral tier lost its ungated case — second-opinion's refusal path is untested"
+has "$_CFG" 'DOES provide a' \
+  "behavioral tier still exercises the gated (subagent-available) case" \
+  "behavioral tier lost its gated case — second-opinion's budget, batching and persona rules fall back to string-presence coverage only"
+has "$_PROMPT" 'Your environment: {{environment}}' \
+  "the harness parameterises the environment so both cases share one prompt" \
+  "the prompt no longer takes an environment variable — the gated tests cannot select their environment"
+
 # --- prose rules a behavioral judge is scored against --------------------
 group "voice — human-voice rules are single-valued"
 has "$_HV" 'No paragraph exceeds 4 sentences.' \
@@ -216,4 +245,4 @@ has "$_HV" 'first line of the response' \
   "human-voice makes verdict placement text-observable" \
   "human-voice lost the observable verdict-placement predicate"
 
-unset _HV _MV _SO _REF _AG _HOOK _HANDLER _s _f
+unset _HV _MV _SO _REF _AG _HOOK _HANDLER _PROMPT _CFG _n _s _f
