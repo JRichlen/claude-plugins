@@ -19,7 +19,9 @@ bundle='[]'
 while read -r full; do
   [ -n "$full" ] || continue
   readme="$(gh api "repos/${full}/readme" --jq '.content' 2>/dev/null | base64 -d 2>/dev/null | head -c 4000 || true)"
-  tree="$(gh api "repos/${full}/git/trees/HEAD?recursive=0" --jq '[.tree[].path] | join("\n")' 2>/dev/null || true)"
+  # Recursive so EVERY path a curator might cite is captured — validate-citations.sh
+  # rejects a file citation whose path is not present in this tree.
+  tree="$(gh api "repos/${full}/git/trees/HEAD?recursive=1" --jq '[.tree[] | select(.type=="blob") | .path] | join("\n")' 2>/dev/null || true)"
   workflows="$(gh api "repos/${full}/contents/.github/workflows" --jq '[.[].name] | join(", ")' 2>/dev/null || true)"
   from_sha="$(jq -r --arg f "$full" '(.updated[]? | select(.full_name==$f) | .from) // ""' "$diff")"
   log="$( [ -n "$from_sha" ] && gh api "repos/${full}/commits?per_page=20" \

@@ -96,6 +96,12 @@ else bad "validate-citations rejected a valid ledger (false positive)"; fi
 if bash "$VC" "$FX/cite-index-bad.json" "$FX/cite-diff.json" "$FX/cite-context.json" >/dev/null 2>&1; then
   bad "validate-citations ACCEPTED a fabricated removed-member file citation — the guard is broken"
 else ok "validate-citations rejects a fabricated removed-member file citation (the sim's defect)"; fi
+# Provenance strengthening: repo-was-read is necessary but not sufficient — the cited
+# PATH must be in that repo's gathered tree (the first-curation verifier caught claims
+# citing files whose contents were never in context).
+if bash "$VC" "$FX/cite-index-badpath.json" "$FX/cite-diff.json" "$FX/cite-context.json" >/dev/null 2>&1; then
+  bad "validate-citations ACCEPTED a citation to a path NOT in the gathered tree — provenance guard too weak"
+else ok "validate-citations rejects a file citation whose path is absent from the gathered tree"; fi
 
 # --- scripts parse + JSON is valid -----------------------------------------
 group "fleet-playbook-curator — scripts parse, JSON valid"

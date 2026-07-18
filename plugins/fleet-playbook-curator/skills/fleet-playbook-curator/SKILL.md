@@ -98,11 +98,15 @@ Entry points, cross-repo interactions, "which repo owns what", gotchas, invarian
   citation.** If someone asks about a removed member's old README in a one-shot/no-tool
   setting, answer only with that manifest-level removal fact; do **not** speculate about
   its prior contents, show retrieval steps for it, or even include an example
-  `repo@sha:path` citation for that removed member. The no-file-citation part of this rule is enforced by `scripts/validate-citations.sh`
-  — it runs in the curate job before the PR opens and in the cheap eval, so
-  a "cited-but-fabricated" claim is a red build, not a review catch. (This guard exists
+  `repo@sha:path` citation for that removed member. `scripts/validate-citations.sh`
+  enforces the structural half — it runs in the curate job before the PR opens and in the
+  cheap eval — so **both** a removed-member file citation **and** a citation to a path that
+  was never in the gathered tree are a red build, not a review catch. (This guard exists
   because the `ansible-homelab-sim` simulation caught a curator inventing content for a
-  removed member.)
+  removed member, and the first live curation caught claims citing files whose contents
+  were never gathered.) What it can't check deterministically — whether the cited file's
+  *contents* actually support the claim — is the behavioral eval's and the human/verifier
+  layer's job, not this gate's.
 - **Freshness banner** at the top: last successful curation + "if older than N days,
   distrust this."
 - Prefer embedding a **verification command** (a `grep`/`gh` one-liner) over stating a
