@@ -87,6 +87,13 @@ jobs:
           # It must: cite every claim (repo@sha:path), append ONE changelog entry,
           # and touch only sections whose sources changed. It writes NOTHING to main.
           cat PROMPT.md context.json | $AGENT_CMD > /dev/null
+      - name: Guard — every citation must be traceable (fail before the PR, not in review)
+        run: |
+          set -euo pipefail
+          # Rejects the "cited-but-fabricated" failure mode: a claim naming a file
+          # that was never read this pass (worst case, a removed member). If this
+          # fails, the curation is discarded — it never reaches a PR.
+          bash scripts/validate-citations.sh fleet-playbook/index.json diff.json context.json
       - name: Open a PR — never a direct push to main
         run: |
           set -euo pipefail

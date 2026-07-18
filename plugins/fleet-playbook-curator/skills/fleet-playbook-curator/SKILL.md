@@ -92,8 +92,13 @@ Entry points, cross-repo interactions, "which repo owns what", gotchas, invarian
 - **Directives, not declaratives.** Not "the inventory lives in `hosts.yml`" but
   "**check** `hosts.yml` — as of `<sha>` it held the inventory."
 - **Every substantive claim carries `repo@sha:path`** and an as-of stamp. An uncited
-  claim is omitted or flagged `STALE`, never asserted. (The cheap eval fails a build that
-  breaks this.)
+  claim is omitted or flagged `STALE`, never asserted. A citation is only valid if the
+  surface it names was actually read this pass (present in `context.json`); a **removed
+  member is never read, so it may carry only a manifest-level removal note, never a file
+  citation.** `scripts/validate-citations.sh` enforces this — it runs in the curate job
+  before the PR opens and in the cheap eval, so a "cited-but-fabricated" claim is a red
+  build, not a review catch. (This guard exists because the `ansible-homelab-sim`
+  simulation caught a curator inventing content for a removed member.)
 - **Freshness banner** at the top: last successful curation + "if older than N days,
   distrust this."
 - Prefer embedding a **verification command** (a `grep`/`gh` one-liner) over stating a

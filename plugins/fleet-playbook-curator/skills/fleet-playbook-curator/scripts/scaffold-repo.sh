@@ -59,6 +59,7 @@ emit "fleet-playbook/CHANGELOG.md"       "$tpl/fleet-playbook/CHANGELOG.md"
 copy_verbatim "scripts/list-fleet-members.sh" "$here/scripts/list-fleet-members.sh"
 copy_verbatim "scripts/diff-fleet.sh"         "$here/scripts/diff-fleet.sh"
 copy_verbatim "scripts/gather-context.sh"     "$here/scripts/gather-context.sh"
+copy_verbatim "scripts/validate-citations.sh" "$here/scripts/validate-citations.sh"
 copy_verbatim "PROMPT.md"                     "$here/PROMPT.md"
 [ "$plan" = 1 ] && echo "# plan only — nothing written"
 exit 0

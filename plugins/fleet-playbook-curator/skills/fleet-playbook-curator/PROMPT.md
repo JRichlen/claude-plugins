@@ -12,6 +12,16 @@ to look and **when** it was read. Concretely:
 - **Every substantive claim carries a citation** `repo@sha:path` and an as-of note.
   A claim you cannot cite from `context.json`, you **omit** or mark `STALE` — you
   never assert it.
+- **A citation is valid ONLY if the surface it names is actually in `context.json`**
+  for that repo (a README head, tree entry, workflow, or commit-log line), OR it is a
+  membership fact from the manifest (`diff.json`). A `path` you did not read this pass
+  is **not** a citation — pointing at `README.md` for a repo whose `readme_head` you
+  never received is fabrication with a fake citation. Omit it.
+- **Removed members carry NO gathered surface** (`gather-context.sh` does not read
+  them; they arrive with `content_available: false`). For anything in `removed`, emit
+  **only a manifest-level removal statement** ("no longer in the fleet as of `<sha>`").
+  **Never** make a content claim about a removed member and **never** attach a
+  `repo@sha:path` file citation to it — even if you recall its prior contents.
 - **Edit, do not regenerate.** Touch only the sections whose sources changed. Leave
   stable ordering so nothing churns.
 - **Directives, not declaratives.** Write "**check** `hosts.yml` — as of `abc123` it

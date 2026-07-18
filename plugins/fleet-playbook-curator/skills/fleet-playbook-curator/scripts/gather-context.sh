@@ -29,5 +29,9 @@ while read -r full; do
     '. + [{full_name:$full, readme_head:$readme, tree:$tree, workflows:$wf, recent_commits:$log}]' <<<"$bundle")"
 done <<<"$touched"
 
+# Removed members are emitted manifest-only with an explicit content_available:false
+# marker — the curator may state their removal but must NOT make any content claim
+# about them (they were not read this pass). The marker makes that contract
+# machine-evident rather than implied by absence.
 jq -n --argjson bundle "$bundle" --slurpfile d "$diff" \
-  '{ removed: ($d[0].removed // []), context: $bundle }'
+  '{ removed: (($d[0].removed // []) | map(. + {content_available: false})), context: $bundle }'

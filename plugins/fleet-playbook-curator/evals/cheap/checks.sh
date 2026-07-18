@@ -22,7 +22,7 @@ for f in \
   "$PLUGIN_DIR/.claude-plugin/plugin.json" \
   "$SK/SKILL.md" "$SK/PROMPT.md" \
   "$SK/scripts/list-fleet-members.sh" "$SK/scripts/diff-fleet.sh" \
-  "$SK/scripts/gather-context.sh" "$SK/scripts/scaffold-repo.sh" \
+  "$SK/scripts/gather-context.sh" "$SK/scripts/scaffold-repo.sh" "$SK/scripts/validate-citations.sh" \
   "$SYNC" "$SK/templates/fleet.example.yaml" \
   "$PB/SKILL.md" "$PB/index.schema.json" "$PB/index.seed.json" "$PB/CHANGELOG.md" \
   "$PLUGIN_DIR/agents/fleet-playbook-curator.md" \
@@ -83,6 +83,19 @@ if command -v jq >/dev/null 2>&1; then
 else
   ok "jq unavailable — skipping determinism exec check (structural checks still enforced)"
 fi
+
+# --- invariant: citations must be TRACEABLE, not just present --------------
+# Closes the "cited-but-fabricated" hole the ansible-homelab-sim simulation found:
+# a claim can carry a sha + path yet name a file never read this pass (worst case,
+# a removed member). The validator + these fixtures make that a red build.
+group "fleet-playbook-curator — citation traceability guard"
+VC="$SK/scripts/validate-citations.sh"
+if bash "$VC" "$FX/cite-index-good.json" "$FX/cite-diff.json" "$FX/cite-context.json" >/dev/null 2>&1; then
+  ok "validate-citations accepts a fully-traceable ledger"
+else bad "validate-citations rejected a valid ledger (false positive)"; fi
+if bash "$VC" "$FX/cite-index-bad.json" "$FX/cite-diff.json" "$FX/cite-context.json" >/dev/null 2>&1; then
+  bad "validate-citations ACCEPTED a fabricated removed-member file citation — the guard is broken"
+else ok "validate-citations rejects a fabricated removed-member file citation (the sim's defect)"; fi
 
 # --- scripts parse + JSON is valid -----------------------------------------
 group "fleet-playbook-curator — scripts parse, JSON valid"

@@ -40,7 +40,9 @@ _(curated — task → repo/file/command, each stamped)_
 
 ## Fleet membership
 
-_(curated from the deterministic manifest — added/renamed/archived/unreadable members)_
+_(curated from the deterministic manifest — added/renamed/archived/unreadable/removed
+members. Removed members are manifest-only: state that they left the fleet and when,
+NEVER a content claim about them — they are not read this pass.)_
 
 ---
 _This file is maintained by the fleet-playbook-curator. The claim ledger backing every
