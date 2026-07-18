@@ -19,6 +19,9 @@ for f in "$index" "$ctx"; do [ -f "$f" ] || { echo "validate-citations: no such 
 # Repos we actually read this pass (have a gathered surface).
 read_repos="$(jq -r '.context[]?.full_name' "$ctx" 2>/dev/null | sort -u)"
 
+# The gathered tree (newline-separated blob paths) for one repo, or empty.
+tree_of() { jq -r --arg r "$1" '.context[]? | select(.full_name==$r) | .tree // ""' "$ctx" 2>/dev/null; }
+
 violations=0
 while IFS= read -r claim; do
   [ -n "$claim" ] || continue
@@ -26,9 +29,18 @@ while IFS= read -r claim; do
   path="$(jq -r '.path // ""' <<<"$claim")"
   # Manifest-level citations (no file surface) are always allowed.
   case "$path" in ""|"(manifest)"|manifest|HEAD|head) continue ;; esac
-  # A FILE-path citation requires that repo to have been read this pass.
+  # (1) A FILE-path citation requires that repo to have been read this pass.
   if ! grep -qxF "$repo" <<<"$read_repos"; then
     echo "FABRICATED CITATION: claim cites ${repo}@…:${path} but ${repo} was not read this pass (absent from context.json). Removed/unread members may carry ONLY manifest-level citations." >&2
+    violations=$((violations + 1))
+    continue
+  fi
+  # (2) The cited PATH must actually be in that repo's gathered tree — closes the
+  #     "cited a file that wasn't in the surface" gap: repo-was-read is necessary
+  #     but not sufficient. (Semantic support of the claim by the file is the
+  #     behavioral/verifier layer's job, not this deterministic gate.)
+  if ! tree_of "$repo" | grep -qxF "$path"; then
+    echo "UNTRACEABLE CITATION: claim cites ${repo}:${path}, but that path is not in ${repo}'s gathered tree in context.json." >&2
     violations=$((violations + 1))
   fi
 done < <(jq -c '.claims[]?' "$index")
