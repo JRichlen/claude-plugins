@@ -95,10 +95,14 @@ Entry points, cross-repo interactions, "which repo owns what", gotchas, invarian
   claim is omitted or flagged `STALE`, never asserted. A citation is only valid if the
   surface it names was actually read this pass (present in `context.json`); a **removed
   member is never read, so it may carry only a manifest-level removal note, never a file
-  citation.** `scripts/validate-citations.sh` enforces this — it runs in the curate job
-  before the PR opens and in the cheap eval, so a "cited-but-fabricated" claim is a red
-  build, not a review catch. (This guard exists because the `ansible-homelab-sim`
-  simulation caught a curator inventing content for a removed member.)
+  citation.** If someone asks about a removed member's old README in a one-shot/no-tool
+  setting, answer only with that manifest-level removal fact; do **not** speculate about
+  its prior contents, show retrieval steps for it, or even include an example
+  `repo@sha:path` citation for that removed member. `scripts/validate-citations.sh`
+  enforces this — it runs in the curate job before the PR opens and in the cheap eval, so
+  a "cited-but-fabricated" claim is a red build, not a review catch. (This guard exists
+  because the `ansible-homelab-sim` simulation caught a curator inventing content for a
+  removed member.)
 - **Freshness banner** at the top: last successful curation + "if older than N days,
   distrust this."
 - Prefer embedding a **verification command** (a `grep`/`gh` one-liner) over stating a
