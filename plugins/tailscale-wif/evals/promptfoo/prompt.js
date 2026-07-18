@@ -1,10 +1,14 @@
-// Prompt FUNCTION (not a Nunjucks template): reads the skill file and splices it
-// in as a raw string, so skill content that contains template-looking syntax
-// (e.g. bash ${#var} => a stray `{#`) never reaches promptfoo's Nunjucks renderer.
+// Prompt FUNCTION: reads SKILL.md and neutralizes any Nunjucks tag-openers in it
+// before returning, because promptfoo renders the prompt (even a function's output)
+// through Nunjucks — and skill content can contain template-looking syntax (e.g. bash
+// ${#var} => a stray `{#` that Nunjucks reads as an unterminated comment). Inserting a
+// space after `{` in `{#`/`{{`/`{%` makes the renderer ignore it; the model still reads
+// the example fine (this is a behavioral test, not a copy-paste fidelity test).
 const fs = require('fs');
 const path = require('path');
 module.exports = async function ({ vars }) {
-  const skill = fs.readFileSync(path.join(__dirname, '../../skills/tailscale-wif/SKILL.md'), 'utf8');
+  const raw = fs.readFileSync(path.join(__dirname, '../../skills/tailscale-wif/SKILL.md'), 'utf8');
+  const skill = raw.replace(/\{([#{%])/g, '{ $1');
   return `You are an AI coding agent helping a user. You have been given the following
 skill, and you follow it exactly:
 
