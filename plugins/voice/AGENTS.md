@@ -26,7 +26,9 @@ Read the skill that matches the element you are about to write:
 The routing rule is **per output element, not per response**. One reply commonly
 contains both: prose sections follow `human-voice`, an embedded trace follows
 `machine-voice`. Code and file contents, commit messages, creative writing, and
-turns that are only a clarifying question fall outside both.
+turns that are only a clarifying question or only tool calls fall outside both —
+and that exemption takes precedence over machine-voice's list, so a config or
+schema the user asked you to author ships verbatim rather than compressed.
 
 `commands/voice.md` is the entry point a user invokes to read the routing rule
 on demand.

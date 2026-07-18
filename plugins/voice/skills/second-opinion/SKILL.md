@@ -51,7 +51,13 @@ Both must hold before anything else happens.
 Never run for quick facts or low-stakes picks. Cost consciousness is a design
 constraint, not a preference.
 
-## Step 1 — Budget
+## Step 1 — Extract claims
+
+Decompose the verdict into load-bearing claims. A claim is load-bearing if the
+verdict weakens when it falls. Skip decorative claims. If extraction itself is
+ambiguous — it is unclear what the verdict rests on — ask before spending.
+
+## Step 2 — Budget
 
 Count one unit per subagent call. **Total = fact-check calls + advisor
 personas.**
@@ -59,14 +65,8 @@ personas.**
 - Default shape: **1 batched fact-check call + ≤3 advisors = 4 units.**
 - Fact-checking is **batched**: one subagent receives all load-bearing claims
   and returns a per-claim verdict list. Do not spawn one call per claim.
-- **Hard cap 6.** If the plan exceeds 6 units, stop after claim extraction,
-  state the exact planned count, and wait for a yes.
-
-## Step 2 — Extract claims
-
-Decompose the verdict into load-bearing claims. A claim is load-bearing if the
-verdict weakens when it falls. Skip decorative claims. If extraction itself is
-ambiguous — it is unclear what the verdict rests on — ask before spending.
+- **Hard cap 6.** If the plan exceeds 6 units, stop here — before dispatching
+  anything — state the exact planned count, and wait for a yes.
 
 ## Step 3 — Fact-check
 

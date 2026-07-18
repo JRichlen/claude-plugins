@@ -1,13 +1,16 @@
 ---
 name: machine-voice
 description: >-
-  Compression rules for machine-read output — agent traces, tool-call logs,
-  status lines, progress updates, handoff notes, state dumps, config, schemas,
-  reference cards, and structured data another agent parses. Applies three
-  layers: lexical compression, markdown structure as navigation, and emojis as
-  typed status markers. Reach for it when emitting any of those artifact types.
-  Companion to human-voice, which governs prose a human reads; every element
-  this skill's list does not name belongs to human-voice.
+  Compression rules for standalone machine-read artifacts the reader scans —
+  agent traces, tool-call logs, status lines, progress updates, handoff notes,
+  state dumps, config, schemas, reference cards, and structured data another
+  agent parses. Applies three layers: lexical compression, markdown structure as
+  navigation, and emojis as typed status markers. Reach for it when emitting one
+  of those artifacts on its own. Companion to human-voice, which governs prose a
+  human reads and also owns any table or block that serves surrounding
+  explanation. Neither skill applies to code or file contents the user will
+  save, commit messages, creative writing, or turns that are only a clarifying
+  question — those ship unstyled and uncompressed.
 license: MIT
 compatibility: >-
   PORTABILITY: fully harness-agnostic. The compression layers are prose
@@ -41,9 +44,33 @@ The split is **per element, not per response**. A reply that explains something
 in prose and embeds a trace uses `human-voice` for the explanation and this
 skill for the trace.
 
-For an element that arguably fits one of the four, break the tie on the
-artifact, not the mood: would this element still be correct pasted into a log
-file or a config with no surrounding sentences? Yes → this skill.
+## Precedence — read before applying the list
+
+The list above is not the last word. Two rules beat it, in this order.
+
+**1. Out of scope beats the list.** These never get compressed, even when they
+look exactly like a config or a schema:
+
+> Code and file contents, commit messages, creative or persona writing, and
+> turns that are only a clarifying question or only tool calls.
+
+The contents of a real `.eslintrc`, a `SKILL.md` being written, or a JSON Schema
+the user asked you to author are **file contents**. Ship them verbatim and
+unstyled. Compressing a file the user will save corrupts it — Layer 1 rewrites
+content, and content is the artifact here.
+
+**2. Serving prose beats the list.** An element that exists to support
+surrounding explanation belongs to `human-voice`, even if it matches a bullet. A
+four-database comparison table inside a recommendation is the explanation's
+evidence, not a standalone reference card, so it takes `human-voice`'s
+confidence tags and never this skill's status glyphs.
+
+**3. Otherwise**, a standalone artifact matching one of the four bullets is
+this skill's.
+
+Tiebreak within rule 3 only: would this element still be correct pasted into a
+log file with no surrounding sentences, *and* is it something the reader scans
+rather than saves? Both yes → this skill.
 
 ## The three layers
 

@@ -53,8 +53,10 @@ tests:
           terse, headline-style or key:value lines, often with status markers at
           line start. FAIL if the whole reply is compressed telegraphic style
           with no readable prose. FAIL if the log block is written as flowing
-          narrative sentences. FAIL if the model announces which skill it is
-          using instead of simply applying it.
+          narrative sentences. Grade ONLY the final user-facing answer: ignore
+          any reasoning or "thinking" section entirely, and do not penalise the
+          model for naming a skill — no skill forbids that, and the plugin's own
+          command file asks for it.
 
   - description: out-of-scope output is left unstyled
     vars:
@@ -66,9 +68,10 @@ tests:
           requires the commit message itself contain NO confidence tags (no ✅,
           ⚠️, or ❓), no verdict-first framing, and no status emojis. A commit
           message is explicitly out of scope for both voice skills and must ship
-          unstyled. FAIL if the commit message carries a confidence tag or a
-          verdict line. Brief surrounding conversational prose is acceptable and
-          is not itself a failure.
+          unstyled. Grade ONLY the commit message itself — its subject line and
+          body. FAIL only if a ✅/⚠️/❓ glyph or a verdict line appears inside the
+          commit message. Surrounding conversational prose is out of scope for
+          this test and may legitimately carry a confidence tag; do not grade it.
 
   - description: decision-support answer leads with the verdict
     vars:
@@ -109,6 +112,11 @@ tests:
 
   - description: second-opinion is offered, never auto-run
     vars:
+      # Both skills must be injected: the rubric's FAIL conditions reference
+      # second-opinion's output format, which the model cannot be expected to
+      # avoid emitting unless it has actually been shown that format.
+      skill: file://../../skills/second-opinion/SKILL.md
+      companion: file://../../skills/human-voice/SKILL.md
       question: "I'm thinking of moving our whole auth layer to a custom JWT implementation instead of using Auth0. Quick gut check — good idea?"
     assert:
       - type: llm-rubric

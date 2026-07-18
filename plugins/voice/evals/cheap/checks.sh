@@ -55,11 +55,45 @@ has "$_MV" 'These four bullets are the whole list' \
   "machine-voice keeps the closed-list rule (no generalizing the gate)" \
   "machine-voice lost 'these four bullets are the whole list' — the gate is open-ended again and swallows prose"
 
+# Grepping the sentence is not enough: a fifth bullet can be added while the
+# words "four bullets are the whole list" remain verbatim. Count them, and
+# assert each one, so widening the gate is what goes red.
+_n=$(sed -n '/^This skill governs an output element when it is one of:/,/whole list/p' "$_MV" 2>/dev/null | grep -c '^- ')
+if [ "$_n" = "4" ]; then
+  ok "the closed list still has exactly 4 bullets"
+else
+  bad "the closed list has $_n bullets, not 4 — the gate was widened while its 'four bullets' sentence stayed intact"
+fi
+has "$_MV" 'Agent trace or tool-call log' \
+  "closed list keeps the trace/log bullet" \
+  "closed list lost the trace/log bullet"
+has "$_MV" 'Status line, progress update, handoff note' \
+  "closed list keeps the status/progress bullet" \
+  "closed list lost the status/progress bullet"
+has "$_MV" 'State dump, config, schema, reference card' \
+  "closed list keeps the state/config/schema bullet" \
+  "closed list lost the state/config/schema bullet"
+has "$_MV" 'Structured data block another agent will parse' \
+  "closed list keeps the structured-data bullet" \
+  "closed list lost the structured-data bullet"
+
 # --- clause 1: the partition is EXHAUSTIVE (explicit out-of-scope) ---------
 group "voice — routing is exhaustive"
 has "$_HV" 'Out of scope for both skills' \
   "human-voice names the out-of-scope set (code, commit messages, creative writing)" \
   "human-voice lost the out-of-scope block — code and commit messages fall into neither voice with no instruction"
+# The carve-out has to be readable from EITHER entry point. A model that routes
+# a config to machine-voice must learn there that authored files are exempt;
+# stating it only in human-voice leaves that path unguarded.
+has "$_MV" 'Out of scope beats the list' \
+  "machine-voice restates the out-of-scope carve-out and its precedence" \
+  "machine-voice does not mention the out-of-scope set — a model entering via machine-voice would compress an authored config file"
+has "$_MV" 'Serving prose beats the list' \
+  "machine-voice yields tables that serve surrounding explanation to human-voice" \
+  "machine-voice lost the serving-prose rule — a comparison table inside a recommendation matches both skills with no tiebreak"
+has "$_HV" 'Out of scope wins over machine-voice' \
+  "human-voice states the same precedence from its side" \
+  "human-voice lost the out-of-scope precedence statement — the two skills can disagree on an authored config"
 has "$_HV" 'commit messages' \
   "human-voice exempts commit messages from styling" \
   "human-voice no longer exempts commit messages — verdict-first formatting would leak into git history"
@@ -69,7 +103,7 @@ hasE "$_MV" 'this skill does not apply; follow .human-voice.' \
 
 # --- clause 1: one closed tag vocabulary across the three skills -----------
 group "voice — confidence vocabulary is closed and shared"
-has "$_HV" 'is reserved for' \
+has "$_HV" 'belongs to `second-opinion` alone' \
   "human-voice reserves the conflict glyph for second-opinion alone" \
   "human-voice lost the reserved-glyph carve-out — the tag vocabularies of the two skills now collide"
 has "$_MV" 'Vocabulary collision' \
@@ -126,6 +160,33 @@ has "$_HOOK" 'startup|clear|compact' \
 has "$_HANDLER" 'additionalContext' \
   "the handler emits additionalContext (the documented injection contract)" \
   "the handler no longer emits additionalContext — the hook runs but injects nothing"
+
+# The injected string is the FIRST thing in context every session, before any
+# SKILL.md is read. Asserting only that the key exists would let the entire
+# routing rule be swapped for arbitrary standing instructions while the suite
+# stayed green. These check what it actually SAYS, so the highest-priority
+# injection point is held to the same invariant as the skills themselves.
+group "voice — hook injects the invariant, not just any text"
+has "$_HANDLER" 'Route each output ELEMENT' \
+  "injected text carries the element-level routing rule" \
+  "injected text no longer states element-level routing — the hook can inject anything and stay green"
+has "$_HANDLER" 'Out of scope for both skills, and this beats everything below' \
+  "injected text carries the out-of-scope precedence rule" \
+  "injected text lost the out-of-scope precedence — authored config/schema files would get compressed"
+has "$_HANDLER" 'Never run the `second-opinion` skill unbidden' \
+  "injected text carries the never-unbidden rule" \
+  "injected text lost the never-unbidden rule — the always-on injection no longer restrains second-opinion"
+has "$_HANDLER" '✅ verified / ⚠️ inferred / ❓ unverified' \
+  "injected text carries the closed confidence vocabulary" \
+  "injected text lost the closed confidence vocabulary"
+lacksE "$_HANDLER" 'proactively|aggressively|without asking|do not ask' \
+  "injected text contains no standing instruction to act unprompted" \
+  "injected text tells the model to act proactively/aggressively — a standing instruction the user never authorised"
+if bash "$_HANDLER" 2>/dev/null | python3 -c 'import json,sys; d=json.load(sys.stdin); sys.exit(0 if d["hookSpecificOutput"]["hookEventName"]=="SessionStart" and len(d["hookSpecificOutput"]["additionalContext"])>200 else 1)' 2>/dev/null; then
+  ok "handler emits well-formed SessionStart JSON with a non-trivial payload"
+else
+  bad "handler does not emit valid SessionStart JSON with a real additionalContext payload"
+fi
 has "$_AG" 'convenience, never a dependency' \
   "AGENTS.md states the hook is a convenience, not a dependency" \
   "AGENTS.md dropped the convenience-not-dependency statement — the cross-harness promise is undocumented"

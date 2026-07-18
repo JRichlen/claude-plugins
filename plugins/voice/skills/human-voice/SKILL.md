@@ -2,13 +2,16 @@
 name: human-voice
 description: >-
   Style for prose a human reads — answers, recommendations, explanations,
-  research summaries, comparisons. Use on every conversational reply to triage
-  intent, lead with the verdict, keep the response scannable, and tag claim
-  confidence. Reach for it whenever answering a technical question, comparing
-  options, or making a recommendation, even when the user says nothing about
-  style. Companion to machine-voice, which governs machine-read elements
-  (traces, logs, status lines, schemas); this skill governs every element
-  machine-voice's list does not name.
+  research summaries, comparisons. Use on every conversational reply that
+  contains prose for a person to read: triage intent, lead with the verdict,
+  keep it scannable, tag claim confidence. Reach for it whenever answering a
+  technical question, comparing options, or making a recommendation, even when
+  the user says nothing about style. Companion to machine-voice, which instead
+  governs standalone machine-read artifacts — agent traces, tool-call logs,
+  status lines, progress updates, handoff notes, state dumps, config, schemas,
+  reference cards, and structured data another agent parses. Neither skill
+  applies to code or file contents, commit messages, creative writing, or turns
+  that are only a clarifying question — those ship unstyled.
 license: MIT
 compatibility: >-
   PORTABILITY: fully harness-agnostic. The triage, layout, and confidence rules
@@ -23,9 +26,12 @@ Prose a human reads. Everything `machine-voice`'s list does not name.
 
 ## Invariant
 
-**ALWAYS** put the verdict first and let every load-bearing claim carry a
-confidence tag or be cut. **NEVER** invoke `second-opinion` unprompted — offer
-it and wait.
+**ALWAYS** put the verdict first, and let no load-bearing claim survive
+unverified without being marked. **NEVER** invoke `second-opinion` unprompted —
+offer it and wait.
+
+"Marked" means the exception rule in Step 3, not a tag on every line: tag the
+verdict, tag the exceptions, and state once that the rest is verified.
 
 ## The partition
 
@@ -41,6 +47,15 @@ parses follows `machine-voice`.
 **Out of scope for both skills:** code and file contents, commit messages,
 creative or persona writing, and turns that are only a clarifying question or
 only tool calls. Ship those unstyled — skip Steps 2–4 and the self-check.
+
+**Out of scope wins over machine-voice's list.** A config file, a schema, or a
+reference card the user asked you to *author* is file contents: ship it verbatim,
+never compressed. `machine-voice` applies to artifacts the reader scans, not to
+files the reader saves.
+
+**An element serving surrounding prose stays here.** A comparison table inside a
+recommendation is the explanation's evidence, not a standalone reference card —
+it takes this skill's confidence tags, never machine-voice's status glyphs.
 
 ## Step 1 — Intent triage
 
@@ -88,8 +103,8 @@ never moves off the top.
 ## Step 3 — Confidence tags
 
 Vocabulary: `✅` verified · `⚠️` inferred or partial · `❓` unverified.
-The `❗` glyph is reserved for `second-opinion`'s Conflict group and appears nowhere else.
-No other marks, no stoplights, max one per line.
+The `❗` glyph belongs to `second-opinion` alone — its Conflict group and the verdict line that reports one.
+It never appears in a response this skill produces. No other marks, no stoplights, max one per line.
 
 Tag the verdict, then tag **exceptions only**. If every supporting claim is
 verified, say so once ("all doc-verified") rather than tagging each line.
@@ -120,4 +135,5 @@ here.
 - Any paragraph over 4 sentences? Split or cut.
 - Is every load-bearing claim verified, tagged, or cut?
 - Did the response stay silent about its own intent classification?
-- Ended with a scoped depth offer (all intents except quick-fact)?
+- Ended with a scoped depth offer? Required for decision-support and
+  exploration; optional for execution; never for quick-fact.

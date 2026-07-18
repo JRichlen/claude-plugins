@@ -1,7 +1,7 @@
 # voice 🗣️
 
-Three skills that decide how output is written, and route between themselves
-automatically.
+Three skills that decide how output is written, with an explicit routing rule
+for picking between them.
 
 - **human-voice** — prose a human reads. Verdict first, scannable layers,
   claims tagged `✅` verified / `⚠️` inferred / `❓` unverified.
@@ -37,7 +37,9 @@ automatically.
 explanation is `human-voice`, an embedded trace is `machine-voice`.
 
 Code and file contents, commit messages, creative writing, and turns that are
-only a clarifying question fall outside both — they ship unstyled.
+only a clarifying question or only tool calls fall outside both — they ship
+unstyled. That exemption beats the machine-voice list: a config or schema you
+were asked to *author* is file contents, not a machine-read artifact.
 
 ## The always-on part
 
