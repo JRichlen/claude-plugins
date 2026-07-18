@@ -103,6 +103,26 @@
         "dev-log",
         "retrospective"
       ]
+    },
+    {
+      "name": "voice",
+      "description": "Route every response element to exactly one voice: prose to human-voice (verdict-first, confidence-tagged), machine-read artifacts to machine-voice (compressed traces, logs, status lines); plus second-opinion, an offer-only subagent validation pipeline that never runs unbidden.",
+      "version": "0.0.1",
+      "source": "./plugins/voice",
+      "author": {
+        "name": "Jordan Richlen"
+      },
+      "license": "MIT",
+      "keywords": [
+        "voice",
+        "style",
+        "prose",
+        "output-style",
+        "confidence",
+        "validation",
+        "second-opinion",
+        "communication"
+      ]
     }
   ]
 }
