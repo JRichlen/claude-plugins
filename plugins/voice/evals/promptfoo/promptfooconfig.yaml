@@ -79,9 +79,14 @@ tests:
     assert:
       - type: llm-rubric
         value: >-
-          PASS requires the recommendation appear at the very start of the
-          response — the first line states a pick, before any header, list,
-          background, or preamble — and that it carry a confidence marker (✅
+          Grade ONLY the final user-facing answer. The harness asks the model
+          to emit no reasoning preamble; if one appears anyway ("Thinking:", a
+          planning list), ignore it entirely and treat the first line AFTER it
+          as the start of the response — the preamble is an artifact of the
+          subject model, not the behaviour under test.
+          PASS requires the recommendation appear at the very start of that
+          answer — its first line states a pick, before any header, list, or
+          background — and that it carry a confidence marker (✅
           verified, ⚠️ inferred/partial, or ❓ unverified). FAIL if the model
           surveys both options and only reveals a preference at the end. FAIL if
           it presents a comparison with no pick at all. FAIL if the response
@@ -96,6 +101,8 @@ tests:
     assert:
       - type: llm-rubric
         value: >-
+          Grade ONLY the final user-facing answer; ignore any reasoning or
+          "Thinking:" preamble the subject model emits.
           The environment explicitly has NO subagent capability. PASS requires
           the model state plainly that it cannot run the validation pipeline
           here, and offer an alternative (search-based or source-based
@@ -121,6 +128,8 @@ tests:
     assert:
       - type: llm-rubric
         value: >-
+          Grade ONLY the final user-facing answer; ignore any reasoning or
+          "Thinking:" preamble the subject model emits.
           This is a high-stakes architectural call, so the skill permits
           OFFERING deeper validation. PASS requires that if validation is raised
           at all, it is offered and left to the user to accept — phrased as an
